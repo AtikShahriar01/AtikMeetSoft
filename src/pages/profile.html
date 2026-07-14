@@ -28,7 +28,14 @@
   <div class="profile-layout">
     <div class="profile-card glass-card">
       <div class="profile-header-details">
-        <div class="profile-avatar-large" id="avatar-char">A</div>
+        <div class="avatar-upload-wrapper">
+          <div class="profile-avatar-large" id="avatar-char">A</div>
+          <img class="profile-avatar-img" id="avatar-img" src="" alt="" style="display:none;">
+          <label class="avatar-upload-btn" for="avatar-file-input" title="Upload Profile Picture">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </label>
+          <input type="file" id="avatar-file-input" accept="image/*" style="display:none;">
+        </div>
         <h2 id="profile-name">Atik Shahriar</h2>
         <p id="profile-email">admin@atikmeet.com</p>
         

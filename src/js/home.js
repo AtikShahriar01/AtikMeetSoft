@@ -33,6 +33,32 @@ async function loadUserData() {
     $('user-display-role').textContent = currentUser.isAdmin ? 'Developer & Admin' : 'Member';
     $('profile-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
     
+    // Load custom profile picture if exists
+    try {
+      let avatarData = null;
+      if (window.electronAPI && window.electronAPI.getAvatar) {
+        const avRes = await window.electronAPI.getAvatar();
+        if (avRes && avRes.success && avRes.dataUrl) {
+          avatarData = avRes.dataUrl;
+        }
+      } else {
+        avatarData = localStorage.getItem('atikmeet_avatar');
+      }
+      if (avatarData) {
+        const avImg = $('profile-avatar-img');
+        const avChar = $('profile-avatar');
+        if (avImg) {
+          avImg.src = avatarData;
+          avImg.style.display = 'block';
+        }
+        if (avChar) {
+          avChar.style.display = 'none';
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load avatar in dashboard:', e);
+    }
+    
     // Set Welcome Header
     $('welcome-text').textContent = `Welcome back, ${currentUser.name.split(' ')[0]}!`;
     
@@ -173,14 +199,24 @@ function setupEventListeners() {
 
   // Copy Link
   $('btn-copy-link').addEventListener('click', async () => {
-    if (generatedMeetingLink) {
-      await window.electronAPI.copyToClipboard(generatedMeetingLink);
+    const linkInput = $('meeting-link-input');
+    const linkVal = linkInput ? linkInput.value : '';
+    if (linkVal) {
+      try {
+        if (linkInput) {
+          linkInput.select();
+          linkInput.setSelectionRange(0, 99999);
+        }
+        await window.electronAPI.copyToClipboard(linkVal);
+      } catch (err) {
+        navigator.clipboard.writeText(linkVal);
+      }
       const copyBtn = $('btn-copy-link');
-      // Tooltip notification visual effect
       copyBtn.classList.add('btn-success');
       setTimeout(() => {
         copyBtn.classList.remove('btn-success');
       }, 1000);
+      alert('Meeting link copied to clipboard!');
     }
   });
 

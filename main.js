@@ -544,14 +544,8 @@ ipcMain.handle('navigate', (event, page) => {
       }
     }
     
-    if (isDeveloperPC) {
-      const pagePath = path.join(__dirname, 'src', 'pages', `${pageName}.html`);
-      mainWindow.loadFile(pagePath, { query });
-    } else {
-      const queryString = page.includes('?') ? page.split('?')[1] : '';
-      const remoteUrl = `${CENTRAL_SERVER_URL}/pages/${pageName}.html${queryString ? '?' + queryString : ''}`;
-      mainWindow.loadURL(remoteUrl);
-    }
+    const pagePath = path.join(__dirname, 'src', 'pages', `${pageName}.html`);
+    mainWindow.loadFile(pagePath, { query });
   }
 });
 
@@ -640,11 +634,7 @@ ipcMain.handle('social-login', async (event, provider) => {
       googleWin = new BrowserWindow(winOptions);
       googleWin.setMenu(null);
       
-      if (isDeveloperPC) {
-        googleWin.loadFile(path.join(__dirname, 'src', 'pages', 'google-login.html'));
-      } else {
-        googleWin.loadURL(`${CENTRAL_SERVER_URL}/pages/google-login.html`);
-      }
+      googleWin.loadFile(path.join(__dirname, 'src', 'pages', 'google-login.html'));
       
       googleWin.once('ready-to-show', () => {
         googleWin.show();
@@ -698,11 +688,7 @@ ipcMain.handle('social-login', async (event, provider) => {
 ipcMain.handle('logout', async () => {
   currentUser = null;
   if (mainWindow) {
-    if (isDeveloperPC) {
-      mainWindow.loadFile(path.join(__dirname, 'src', 'pages', 'login.html'));
-    } else {
-      mainWindow.loadURL(`${CENTRAL_SERVER_URL}/pages/login.html`);
-    }
+    mainWindow.loadFile(path.join(__dirname, 'src', 'pages', 'login.html'));
   }
   return { success: true };
 });
@@ -773,6 +759,37 @@ ipcMain.handle('update-profile', async (event, data) => {
       return res;
     }
     return { success: false, error: 'Not logged in' };
+  }
+});
+
+// ─── Avatar Upload/Download ───
+const avatarDir = path.join(__dirname, 'data', 'avatars');
+if (!fs.existsSync(avatarDir)) {
+  fs.mkdirSync(avatarDir, { recursive: true });
+}
+
+ipcMain.handle('upload-avatar', async (event, { dataUrl }) => {
+  try {
+    if (!currentUser) return { success: false, error: 'Not logged in' };
+    const filePath = path.join(avatarDir, `${currentUser.id}.txt`);
+    fs.writeFileSync(filePath, dataUrl, 'utf-8');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('get-avatar', async () => {
+  try {
+    if (!currentUser) return { success: false };
+    const filePath = path.join(avatarDir, `${currentUser.id}.txt`);
+    if (fs.existsSync(filePath)) {
+      const dataUrl = fs.readFileSync(filePath, 'utf-8');
+      return { success: true, dataUrl };
+    }
+    return { success: false };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 

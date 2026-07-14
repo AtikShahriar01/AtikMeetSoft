@@ -14,6 +14,8 @@ let currentUser = null;
 document.addEventListener('DOMContentLoaded', async () => {
   await loadProfileData();
   setupProfileFormListener();
+  setupAvatarUploadListener();
+  await loadSavedAvatar();
 });
 
 // ── Load Profile Data ────────────────────────────────────────
@@ -92,4 +94,79 @@ function setupProfileFormListener() {
       alert('Error updating profile: ' + result.error);
     }
   });
+}
+
+// ── Avatar Upload Setup ────────────────────────────────────────────
+function setupAvatarUploadListener() {
+  const fileInput = $('avatar-file-input');
+  if (fileInput) {
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      // Limit to 2MB maximum size
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size must be less than 2MB');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result;
+        
+        let success = false;
+        if (window.electronAPI && window.electronAPI.uploadAvatar) {
+          const result = await window.electronAPI.uploadAvatar({ dataUrl: base64 });
+          success = result && result.success;
+        } else {
+          localStorage.setItem('atikmeet_avatar', base64);
+          success = true;
+        }
+        
+        if (success) {
+          const avatarImg = $('avatar-img');
+          const avatarChar = $('avatar-char');
+          if (avatarImg) {
+            avatarImg.src = base64;
+            avatarImg.style.display = 'block';
+          }
+          if (avatarChar) {
+            avatarChar.style.display = 'none';
+          }
+          alert('Profile picture uploaded successfully!');
+        } else {
+          alert('Failed to upload profile picture.');
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+}
+
+async function loadSavedAvatar() {
+  try {
+    let avatarData = null;
+    if (window.electronAPI && window.electronAPI.getAvatar) {
+      const result = await window.electronAPI.getAvatar();
+      if (result && result.success && result.dataUrl) {
+        avatarData = result.dataUrl;
+      }
+    } else {
+      avatarData = localStorage.getItem('atikmeet_avatar');
+    }
+    
+    if (avatarData) {
+      const avatarImg = $('avatar-img');
+      const avatarChar = $('avatar-char');
+      if (avatarImg) {
+        avatarImg.src = avatarData;
+        avatarImg.style.display = 'block';
+      }
+      if (avatarChar) {
+        avatarChar.style.display = 'none';
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load avatar:', err);
+  }
 }

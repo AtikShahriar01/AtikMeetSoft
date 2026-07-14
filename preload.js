@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ─── Profile ───
   updateProfile: (data) => ipcRenderer.invoke('update-profile', data),
+  uploadAvatar: (fileData) => ipcRenderer.invoke('upload-avatar', fileData),
+  getAvatar: () => ipcRenderer.invoke('get-avatar'),
 
   // ─── License ───
   getTrialStatus: () => ipcRenderer.invoke('get-trial-status'),

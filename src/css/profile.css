@@ -141,3 +141,45 @@
   padding-top: 20px;
   text-align: center;
 }
+
+.avatar-upload-wrapper {
+  position: relative;
+  display: inline-block;
+  margin: 0 auto 15px;
+}
+
+.profile-avatar-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--accent);
+  margin-bottom: 0px;
+  display: block;
+}
+
+.avatar-upload-btn {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid var(--bg-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.avatar-upload-btn:hover {
+  background: var(--accent);
+  transform: scale(1.1);
+}
+
+.avatar-upload-btn svg {
+  color: white;
+}

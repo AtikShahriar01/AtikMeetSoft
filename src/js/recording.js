@@ -58,14 +58,14 @@ async function startRecording() {
     // For simplicity of a desktop client, we capture screen display media which records meeting window
     const stream = await navigator.mediaDevices.getDisplayMedia({
       video: {
-        width: 1280,
-        height: 720,
-        frameRate: 30
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30 }
       },
       audio: true // Captures system sounds
     });
 
-    const options = { mimeType: 'video/webm; codecs=vp9' };
+    const options = { mimeType: 'video/webm; codecs=vp9', videoBitsPerSecond: 8000000 };
     
     // Check supported types fallback
     if (!MediaRecorder.isTypeSupported(options.mimeType)) {

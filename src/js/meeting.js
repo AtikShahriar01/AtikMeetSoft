@@ -255,7 +255,11 @@ async function initSignaling() {
   
   // Dynamically load Socket.io Client
   const script = document.createElement('script');
-  script.src = `${signalingUrl}/socket.io/socket.io.js`;
+  if (window.location.protocol === 'file:') {
+    script.src = '../utils/socket.io.min.js';
+  } else {
+    script.src = `${signalingUrl}/socket.io/socket.io.js`;
+  }
   document.head.appendChild(script);
 
   script.onload = () => {
