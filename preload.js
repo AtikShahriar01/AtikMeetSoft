@@ -65,5 +65,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ─── System ───
   getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
-  getAppInfo: () => ipcRenderer.invoke('get-app-info')
+  getAppInfo: () => ipcRenderer.invoke('get-app-info'),
+
+  // ─── Auto-Update ───
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  startUpdate: () => ipcRenderer.invoke('start-update'),
+  onUpdateProgress: (callback) => ipcRenderer.on('update-progress', callback),
+  onUpdateCompleted: (callback) => ipcRenderer.on('update-completed', callback),
+  onUpdateError: (callback) => ipcRenderer.on('update-error', callback)
 });

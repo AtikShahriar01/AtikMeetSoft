@@ -1140,11 +1140,140 @@ ipcMain.handle('get-system-info', () => {
   };
 });
 
+const APP_VERSION = '1.0.0';
+
+// Helper function to download file over HTTPS/HTTP with progress monitoring
+function downloadFile(fileUrl, destPath, onProgress) {
+  const https = require('https');
+  const http = require('http');
+  const fs = require('fs');
+
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destPath);
+    const client = fileUrl.startsWith('https') ? https : http;
+
+    const request = client.get(fileUrl, (response) => {
+      if (response.statusCode === 302 || response.statusCode === 301) {
+        // Handle HTTP redirect (e.g. GitHub releases redirects to AWS S3)
+        const redirectUrl = response.headers.location;
+        file.close();
+        downloadFile(redirectUrl, destPath, onProgress).then(resolve).catch(reject);
+        return;
+      }
+
+      if (response.statusCode !== 200) {
+        reject(new Error(`Failed to download: Server returned ${response.statusCode}`));
+        return;
+      }
+
+      const totalBytes = parseInt(response.headers['content-length'], 10);
+      let downloadedBytes = 0;
+
+      response.on('data', (chunk) => {
+        downloadedBytes += chunk.length;
+        file.write(chunk);
+        if (totalBytes && onProgress) {
+          const progress = Math.round((downloadedBytes / totalBytes) * 100);
+          onProgress(progress);
+        }
+      });
+
+      response.on('end', () => {
+        file.end();
+        resolve();
+      });
+    });
+
+    request.on('error', (err) => {
+      fs.unlink(destPath, () => {});
+      reject(err);
+    });
+  });
+}
+
+// ─── Auto-Update Handlers ───
+ipcMain.handle('check-for-updates', async () => {
+  try {
+    const response = await fetch(`${CENTRAL_SERVER_URL}/version.json`);
+    if (!response.ok) throw new Error('Could not fetch version file from central server');
+    const data = await response.json();
+    
+    const semverCompare = (v1, v2) => {
+      const p1 = v1.split('.').map(Number);
+      const p2 = v2.split('.').map(Number);
+      for (let i = 0; i < 3; i++) {
+        if (p1[i] > p2[i]) return 1;
+        if (p1[i] < p2[i]) return -1;
+      }
+      return 0;
+    };
+
+    if (data && data.version && semverCompare(data.version, APP_VERSION) > 0) {
+      return { updateAvailable: true, version: data.version, url: data.url };
+    }
+    return { updateAvailable: false };
+  } catch (err) {
+    console.error('[Update] Error checking for updates:', err.message);
+    return { updateAvailable: false, error: err.message };
+  }
+});
+
+let isUpdating = false;
+ipcMain.handle('start-update', async (event) => {
+  if (isUpdating) return { success: false, error: 'Update already in progress' };
+  
+  try {
+    const checkRes = await fetch(`${CENTRAL_SERVER_URL}/version.json`);
+    if (!checkRes.ok) throw new Error('Failed to retrieve update URL');
+    const data = await checkRes.json();
+    
+    if (!data || !data.url) throw new Error('Update URL not specified in version file');
+    
+    isUpdating = true;
+    const tempDir = app.getPath('temp');
+    const installerPath = path.join(tempDir, 'atikmeet-setup.exe');
+    
+    console.log(`[Update] Starting download from ${data.url} to ${installerPath}`);
+    
+    await downloadFile(data.url, installerPath, (progress) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('update-progress', progress);
+      }
+    });
+    
+    console.log('[Update] Download complete. Executing installer...');
+    if (mainWindow) {
+      mainWindow.webContents.send('update-completed');
+    }
+    
+    // Launch installer and exit Electron
+    const { exec } = require('child_process');
+    exec(`"${installerPath}"`, (err) => {
+      if (err) {
+        console.error('[Update] Installer execution failed:', err);
+      }
+    });
+    
+    setTimeout(() => {
+      app.quit();
+    }, 1000);
+    
+    return { success: true };
+  } catch (err) {
+    isUpdating = false;
+    console.error('[Update] Update failed:', err.message);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-error', err.message);
+    }
+    return { success: false, error: err.message };
+  }
+});
+
 // ─── App Info ───
 ipcMain.handle('get-app-info', () => {
   return {
     name: 'AtikMeet',
-    version: '1.0.0',
+    version: APP_VERSION,
     developer: 'Atik Shahriar',
     electron: process.versions.electron,
     chrome: process.versions.chrome,

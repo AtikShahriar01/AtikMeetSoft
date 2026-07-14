@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await checkTrialStatus();
   await loadRecentMeetings();
   setupEventListeners();
+  await checkForUpdates();
 });
 
 // ── Load User Details ────────────────────────────────────────
@@ -216,4 +217,52 @@ function joinMeeting(meetingId) {
   
   // Navigate to meeting page passing meetingId as query string
   window.electronAPI.navigate(`meeting?meetingId=${id}`);
+}
+
+// ── Check Auto Updates ────────────────────────────────────────
+async function checkForUpdates() {
+  if (!window.electronAPI || !window.electronAPI.checkForUpdates) return;
+
+  try {
+    const result = await window.electronAPI.checkForUpdates();
+    if (result && result.updateAvailable) {
+      const banner = $('update-banner');
+      const textEl = $('update-banner-text');
+      const updateBtn = $('btn-start-update');
+      const closeBtn = $('btn-close-update-banner');
+
+      textEl.textContent = `New update available! (v${result.version})`;
+      banner.style.display = 'flex';
+
+      // Hook update button
+      updateBtn.addEventListener('click', async () => {
+        updateBtn.disabled = true;
+        updateBtn.textContent = 'Downloading...';
+        
+        await window.electronAPI.startUpdate();
+      });
+
+      // Hook close button
+      closeBtn.addEventListener('click', () => {
+        banner.style.display = 'none';
+      });
+
+      // Listen to update progress events
+      window.electronAPI.onUpdateProgress((event, progress) => {
+        updateBtn.textContent = `Downloading ${progress}%`;
+      });
+
+      window.electronAPI.onUpdateCompleted(() => {
+        updateBtn.textContent = 'Installing...';
+      });
+
+      window.electronAPI.onUpdateError((event, error) => {
+        alert('Update failed: ' + error);
+        updateBtn.disabled = false;
+        updateBtn.textContent = 'Retry Update';
+      });
+    }
+  } catch (err) {
+    console.warn('[Update] Auto update checking failed:', err.message);
+  }
 }
