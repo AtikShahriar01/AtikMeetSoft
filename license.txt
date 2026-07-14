@@ -1,0 +1,33 @@
+========================================================================
+                      AtikMeet - License Agreement
+========================================================================
+Developed by: Atik Shahriar
+Official Website: https://github.com/AtikShahriar01/AtikMeetSoft
+
+Please read the following License Agreement carefully before installing 
+AtikMeet. By installing and using this software, you agree to be bound 
+by the terms of this agreement.
+
+1. Grant of License
+Atik Shahriar grants you a personal, non-transferable, non-exclusive 
+license to use AtikMeet for video conferencing and communications.
+
+2. Restrictions
+You shall not:
+- Decompile, reverse engineer, or disassemble the binary files.
+- Distribute modified versions of this software without permission.
+- Use this software for illegal, malicious, or unauthorized activities.
+
+3. Privacy & Security
+AtikMeet uses WebRTC end-to-end encryption for security. Meetings are 
+private. System settings and user accounts are managed securely via the 
+central cloud database.
+
+4. Disclaimer of Warranty
+AtikMeet is provided "as is" without warranty of any kind, either 
+express or implied. The developer shall not be liable for any damages 
+resulting from the use or inability to use this software.
+
+========================================================================
+Copyright (c) 2026 Atik Shahriar. All rights reserved.
+========================================================================

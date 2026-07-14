@@ -626,10 +626,27 @@ ipcMain.handle('get-current-user', () => {
 });
 
 ipcMain.handle('is-localhost', () => {
-  return isLocalhost;
+  const fs = require('fs');
+  const isDevPC = fs.existsSync('e:\\google meet\\main.js');
+  return isLocalhost || isDevPC;
 });
 
-ipcMain.handle('auto-login-admin', () => {
+ipcMain.handle('auto-login-admin', async () => {
+  const fs = require('fs');
+  const isDevPC = fs.existsSync('e:\\google meet\\main.js');
+  if (isDevPC) {
+    try {
+      console.log('Developer PC detected. Auto-logging in to Render Central Server...');
+      const res = await forwardToCentralServer('login', { email: 'admin@atikmeet.com', password: 'admin123' });
+      if (res.success && res.user) {
+        currentUser = res.user;
+        return { success: true, user: res.user };
+      }
+    } catch (err) {
+      console.error('Auto-login to Central Server failed:', err.message);
+    }
+  }
+  
   if (isLocalhost && db) {
     const admin = db.getAllUsers().find(u => u.isAdmin);
     if (admin) {
