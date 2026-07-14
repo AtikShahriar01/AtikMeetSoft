@@ -91,12 +91,12 @@ function initAuthListeners() {
     signupForm.addEventListener('submit', handleSignup);
   }
 
-  // Toggle between login and signup forms
+  // Trigger Google Login directly on Sign Up click
   const showSignupBtn = $('show-signup');
   if (showSignupBtn) {
     showSignupBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      toggleForm('signup');
+      handleSocialLogin('google');
     });
   }
 
@@ -322,10 +322,10 @@ async function handleSocialLogin(provider) {
 function toggleForm(formName) {
   if (currentForm === formName) return;
 
-  const loginContainer = $('login-container');
-  const signupContainer = $('signup-container');
+  const loginForm = $('login-form');
+  const signupForm = $('signup-form');
 
-  if (!loginContainer || !signupContainer) return;
+  if (!loginForm || !signupForm) return;
 
   // Clear any existing messages and errors
   clearAllErrors();
@@ -333,33 +333,39 @@ function toggleForm(formName) {
 
   if (formName === 'signup') {
     // Animate out login form
-    loginContainer.style.opacity = '0';
-    loginContainer.style.transform = 'translateX(-30px)';
+    loginForm.style.opacity = '0';
+    loginForm.style.transform = 'translateX(-30px)';
 
     setTimeout(() => {
-      loginContainer.style.display = 'none';
-      signupContainer.style.display = 'block';
+      loginForm.style.display = 'none';
+      signupForm.style.display = 'block';
 
       // Trigger reflow for animation
-      void signupContainer.offsetWidth;
+      void signupForm.offsetWidth;
 
-      signupContainer.style.opacity = '1';
-      signupContainer.style.transform = 'translateX(0)';
+      signupForm.style.opacity = '1';
+      signupForm.style.transform = 'translateX(0)';
+      currentForm = 'signup';
+      $('auth-title').innerText = 'Join AtikMeet';
+      $('auth-subtitle').innerText = 'Create your account for HD video calls';
     }, 300);
   } else {
     // Animate out signup form
-    signupContainer.style.opacity = '0';
-    signupContainer.style.transform = 'translateX(30px)';
+    signupForm.style.opacity = '0';
+    signupForm.style.transform = 'translateX(30px)';
 
     setTimeout(() => {
-      signupContainer.style.display = 'none';
-      loginContainer.style.display = 'block';
+      signupForm.style.display = 'none';
+      loginForm.style.display = 'block';
 
       // Trigger reflow for animation
-      void loginContainer.offsetWidth;
+      void loginForm.offsetWidth;
 
-      loginContainer.style.opacity = '1';
-      loginContainer.style.transform = 'translateX(0)';
+      loginForm.style.opacity = '1';
+      loginForm.style.transform = 'translateX(0)';
+      currentForm = 'login';
+      $('auth-title').innerText = 'Welcome Back';
+      $('auth-subtitle').innerText = 'Enter your credentials to access AtikMeet';
     }, 300);
   }
 
