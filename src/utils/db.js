@@ -781,6 +781,18 @@ function getUserMeetings(userId) {
   }
 }
 
+function deleteMeeting(meetingId) {
+  try {
+    db.get('meetings')
+      .remove({ id: meetingId })
+      .write();
+    return { success: true };
+  } catch (error) {
+    console.error('[DB] deleteMeeting error:', error.message);
+    return { success: false, error: 'Failed to delete meeting.' };
+  }
+}
+
 // ── Statistics ───────────────────────────────────────────────
 
 /**
@@ -874,5 +886,6 @@ module.exports = {
   getAllMeetings,
   getActiveMeetings,
   getUserMeetings,
+  deleteMeeting,
   getStats,
 };

@@ -173,6 +173,10 @@ function initSignalingServer() {
               db.endMeeting(meetingId);
               result = { success: true };
             }
+            else if (channel === 'delete-meeting') {
+              const meetingId = args[0];
+              result = db.deleteMeeting(meetingId);
+            }
             else if (channel === 'get-meeting-info') {
               const meetingId = args[0];
               const meeting = db.getMeeting(meetingId);
@@ -886,6 +890,18 @@ ipcMain.handle('end-meeting', async (event, meetingId) => {
     }
   } else {
     return await forwardToCentralServer('end-meeting', meetingId);
+  }
+});
+
+ipcMain.handle('delete-meeting', async (event, meetingId) => {
+  if (isDeveloperPC) {
+    try {
+      return db.deleteMeeting(meetingId);
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  } else {
+    return await forwardToCentralServer('delete-meeting', meetingId);
   }
 });
 

@@ -219,6 +219,10 @@ const server = http.createServer((req, res) => {
           db.endMeeting(meetingId);
           result = { success: true };
         }
+        else if (channel === 'delete-meeting') {
+          const meetingId = args[0];
+          result = db.deleteMeeting(meetingId);
+        }
         else if (channel === 'get-meeting-info') {
           const meetingId = args[0];
           const meeting = db.getMeeting(meetingId);

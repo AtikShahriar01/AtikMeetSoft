@@ -281,7 +281,10 @@ async function loadActiveMeetings() {
         <td>${startTimeFormatted}</td>
         <td><span style="font-weight:bold; color:var(--primary-light);">${participantCount}</span> online</td>
         <td>
-          <button class="btn btn-danger btn-sm btn-force-end" data-id="${meeting.id}">Force End</button>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-warning btn-sm btn-force-end" data-id="${meeting.id}" style="padding: 4px 8px; font-size: 0.8rem; background: var(--warning); border-radius: 4px; border: none; color: #fff; cursor: pointer;">Force End</button>
+            <button class="btn btn-danger btn-sm btn-delete-meeting" data-id="${meeting.id}" style="padding: 4px 8px; font-size: 0.8rem; background: var(--danger); border-radius: 4px; border: none; color: #fff; cursor: pointer;">Delete</button>
+          </div>
         </td>
       `;
       tbody.appendChild(row);
@@ -298,6 +301,22 @@ async function loadActiveMeetings() {
             await loadAdminStats();
           } else {
             alert('Failed to end meeting: ' + res.error);
+          }
+        }
+      });
+    });
+
+    // Attach listener for deleting meetings
+    document.querySelectorAll('.btn-delete-meeting').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const meetingId = btn.getAttribute('data-id');
+        if (confirm(`Are you sure you want to completely delete meeting: ${meetingId} from history and database?`)) {
+          const res = await window.electronAPI.deleteMeeting(meetingId);
+          if (res.success) {
+            await loadActiveMeetings();
+            await loadAdminStats();
+          } else {
+            alert('Failed to delete meeting: ' + res.error);
           }
         }
       });

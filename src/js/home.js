@@ -127,16 +127,22 @@ async function loadRecentMeetings() {
         '<span class="badge badge-success">Active</span>' : 
         '<span class="badge badge-secondary">Ended</span>';
       
+      const rejoinBtn = meeting.isActive ? 
+        `<button class="btn btn-accent btn-sm join-btn-table" data-id="${meeting.id}">Rejoin</button>` : 
+        '';
+      
+      const deleteBtn = `<button class="btn btn-danger btn-sm delete-btn-table" data-id="${meeting.id}" style="padding: 4px 8px; min-width: auto; background: rgba(255, 71, 87, 0.2); border: 1px solid rgba(255, 71, 87, 0.5); color: #ff4757; border-radius: 4px; cursor: pointer; margin-left: 6px;" title="Delete Meeting History">✕</button>`;
+
       row.innerHTML = `
         <td><code style="color:var(--accent); font-weight:bold;">${meeting.id}</code></td>
         <td>${meeting.hostName}</td>
         <td>${statusBadge}</td>
         <td>${dateStr}</td>
         <td>
-          ${meeting.isActive ? 
-            `<button class="btn btn-accent btn-sm join-btn-table" data-id="${meeting.id}">Rejoin</button>` : 
-            `<span style="color:var(--text-secondary); font-size:0.8rem;">No actions</span>`
-          }
+          <div style="display: flex; align-items: center;">
+            ${rejoinBtn}
+            ${deleteBtn}
+          </div>
         </td>
       `;
       tableBody.appendChild(row);
@@ -149,6 +155,23 @@ async function loadRecentMeetings() {
         joinMeeting(id);
       });
     });
+
+    // Add delete event listeners to tables
+    document.querySelectorAll('.delete-btn-table').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (confirm(`Delete meeting ${id} from history?`)) {
+          const res = await window.electronAPI.deleteMeeting(id);
+          if (res.success) {
+            await loadRecentMeetings();
+          } else {
+            alert('Failed to delete meeting: ' + res.error);
+          }
+        }
+      });
+    });
+  } else {
+    tableBody.innerHTML = '<tr><td colspan="5" class="empty-row">No meetings found. Start a new one!</td></tr>';
   }
 }
 

@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   joinMeeting: (meetingId) => ipcRenderer.invoke('join-meeting', meetingId),
   getRecentMeetings: () => ipcRenderer.invoke('get-recent-meetings'),
   endMeeting: (meetingId) => ipcRenderer.invoke('end-meeting', meetingId),
+  deleteMeeting: (meetingId) => ipcRenderer.invoke('delete-meeting', meetingId),
   getMeetingInfo: (meetingId) => ipcRenderer.invoke('get-meeting-info', meetingId),
 
   // ─── Admin ───
