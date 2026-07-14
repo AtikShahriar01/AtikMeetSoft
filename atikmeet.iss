@@ -10,10 +10,10 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
-LicenseFile=e:\google meet\license.txt
-OutputDir=e:\google meet\out
-OutputBaseFilename=AtikMeet-1.0.0-Wizard-Setup
-SetupIconFile=e:\google meet\assets\icon.ico
+LicenseFile=license.txt
+OutputDir=out
+OutputBaseFilename=AtikMeet-{#MyAppVersion}-Wizard-Setup
+SetupIconFile=assets\icon.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -25,7 +25,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "e:\google meet\out\AtikMeet-win32-x64\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
+Source: "out\AtikMeet-win32-x64\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

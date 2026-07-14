@@ -693,14 +693,12 @@ ipcMain.handle('get-current-user', () => {
 });
 
 ipcMain.handle('is-localhost', () => {
-  const fs = require('fs');
-  const isDevPC = fs.existsSync('e:\\google meet\\main.js');
+  const isDevPC = !app.isPackaged;
   return isLocalhost || isDevPC;
 });
 
 ipcMain.handle('auto-login-admin', async () => {
-  const fs = require('fs');
-  const isDevPC = fs.existsSync('e:\\google meet\\main.js');
+  const isDevPC = !app.isPackaged;
   if (isDevPC) {
     try {
       console.log('Developer PC detected. Auto-logging in to Render Central Server...');
@@ -1229,7 +1227,7 @@ ipcMain.handle('check-for-updates', async () => {
     };
 
     if (data && data.version && semverCompare(data.version, APP_VERSION) > 0) {
-      const url = `https://github.com/AtikShahriar01/AtikMeetSoft/releases/download/v${data.version}/AtikMeet-${data.version} Setup.exe`;
+      const url = `https://github.com/AtikShahriar01/AtikMeetSoft/releases/download/v${data.version}/AtikMeet-${data.version}-Wizard-Setup.exe`;
       return { updateAvailable: true, version: data.version, url };
     }
     return { updateAvailable: false };
@@ -1250,7 +1248,7 @@ ipcMain.handle('start-update', async (event) => {
     
     if (!data || !data.version) throw new Error('Could not determine new version from GitHub package.json');
     
-    const downloadUrl = `https://github.com/AtikShahriar01/AtikMeetSoft/releases/download/v${data.version}/AtikMeet-${data.version} Setup.exe`;
+    const downloadUrl = `https://github.com/AtikShahriar01/AtikMeetSoft/releases/download/v${data.version}/AtikMeet-${data.version}-Wizard-Setup.exe`;
     
     isUpdating = true;
     const tempDir = app.getPath('temp');

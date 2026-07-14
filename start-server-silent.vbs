@@ -1,7 +1,13 @@
-' AtikMeet Background Server - Silent Starter
-' This script runs the Node.js server silently without showing any console window.
-' Place this in Windows Startup folder for auto-start.
+' AtikMeet Background Server - Dynamic Silent Starter
+' Resolves paths dynamically relative to the script location.
 
 Set objShell = CreateObject("WScript.Shell")
-objShell.CurrentDirectory = "e:\google meet"
-objShell.Run """e:\nodejs\node-v22.16.0-win-x64\node.exe"" ""e:\google meet\server-standalone.js""", 0, False
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+' Get the directory path of the current VBScript file
+scriptPath = objFSO.GetParentFolderName(WScript.ScriptFullName)
+objShell.CurrentDirectory = scriptPath
+
+' Run server-standalone.js silently using the system's global node executable
+' (To use a local portable node, place it inside a "node" folder and change "node" below to ".\node\node.exe")
+objShell.Run "cmd.exe /c node server-standalone.js", 0, False
