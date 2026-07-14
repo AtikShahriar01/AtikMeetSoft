@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   login: (credentials) => ipcRenderer.invoke('login', credentials),
   register: (data) => ipcRenderer.invoke('register', data),
   socialLogin: (provider) => ipcRenderer.invoke('social-login', provider),
+  googleLoginComplete: (data) => ipcRenderer.invoke('google-login-complete', data),
   logout: () => ipcRenderer.invoke('logout'),
   getCurrentUser: () => ipcRenderer.invoke('get-current-user'),
   isLocalhost: () => ipcRenderer.invoke('is-localhost'),

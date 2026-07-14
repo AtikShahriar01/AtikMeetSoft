@@ -376,6 +376,14 @@ function setupEventListeners() {
 
     renderUserTable(filtered);
   });
+
+  // Go to Client App (Home page)
+  const btnDashboard = $('btn-dashboard');
+  if (btnDashboard) {
+    btnDashboard.addEventListener('click', () => {
+      window.electronAPI.navigate('home');
+    });
+  }
 }
 
 // ── Refresh Dashboard contents ────────────────────────────────

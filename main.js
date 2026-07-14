@@ -130,8 +130,12 @@ function initSignalingServer() {
               result = db.createUser({ name, email, password });
             }
             else if (channel === 'social-login') {
-              const provider = args[0];
-              result = await handleSocialLoginHelper(provider);
+              const data = args[0];
+              if (data && typeof data === 'object') {
+                result = await handleSocialLoginHelper(data.provider, data.email, data.name);
+              } else {
+                result = await handleSocialLoginHelper(data);
+              }
             }
             else if (channel === 'logout') {
               result = { success: true };
@@ -458,24 +462,28 @@ function getTrialStatusHelper(userId) {
   }
 }
 
-async function handleSocialLoginHelper(provider) {
+async function handleSocialLoginHelper(provider, email, name) {
+  console.log('[DEBUG] handleSocialLoginHelper called:', { provider, email, name });
   try {
     const providerUpper = provider.charAt(0).toUpperCase() + provider.slice(1);
-    const mockEmail = `atik.${provider}@atikmeet.com`;
-    const mockName = `Atik ${providerUpper}`;
+    const targetEmail = email || `atik.${provider}@atikmeet.com`;
+    const targetName = name || `Atik ${providerUpper}`;
     
-    let user = db.db.get('users').find({ email: mockEmail }).value();
+    let user = db.db.get('users').find({ email: targetEmail }).value();
     if (!user) {
       const result = db.createUser({
-        name: mockName,
-        email: mockEmail,
+        name: targetName,
+        email: targetEmail,
         password: 'sociallogin123'
       });
       if (result.success && result.user) {
-        user = db.db.get('users').find({ email: mockEmail }).value();
+        user = db.db.get('users').find({ email: targetEmail }).value();
       } else {
         return { success: false, error: result.error || 'Failed to create social account' };
       }
+    } else if (name && user.name !== name) {
+      db.updateUser(user.id, { name });
+      user = db.db.get('users').find({ email: targetEmail }).value();
     }
     
     if (user.isBanned) {
@@ -551,19 +559,19 @@ ipcMain.handle('navigate', (event, page) => {
 ipcMain.handle('login', async (event, { email, password }) => {
   if (isDeveloperPC) {
     try {
-      const user = db.loginUser(email, password);
-      if (user) {
-        currentUser = user;
-        return { success: true, user: { ...user, password: undefined } };
+      const loginResult = db.loginUser(email, password);
+      if (loginResult && loginResult.success) {
+        currentUser = loginResult.user;
+        return { success: true, user: loginResult.user };
       }
-      return { success: false, error: 'Invalid email or password' };
+      return { success: false, error: loginResult ? loginResult.error : 'Invalid email or password' };
     } catch (err) {
       return { success: false, error: err.message };
     }
   } else {
     const res = await forwardToCentralServer('login', { email, password });
     if (res.success && res.user) {
-      currentUser = res.user;
+      currentUser = res.user.user || res.user;
     }
     return res;
   }
@@ -590,19 +598,100 @@ ipcMain.handle('register', async (event, { name, email, password }) => {
   }
 });
 
+let googleWin = null;
+let googleAuthResolve = null;
+
+ipcMain.handle('google-login-complete', async (event, data) => {
+  console.log('[DEBUG] google-login-complete received in main:', data);
+  if (googleAuthResolve) {
+    googleAuthResolve(data);
+    googleAuthResolve = null;
+  }
+  if (googleWin) {
+    googleWin.close();
+  }
+  return { success: true };
+});
+
 ipcMain.handle('social-login', async (event, provider) => {
-  if (isDeveloperPC) {
-    const res = await handleSocialLoginHelper(provider);
-    if (res.success && res.user) {
-      currentUser = res.user;
+  console.log('[DEBUG] social-login handler called for provider:', provider);
+  if (provider === 'google') {
+    const googleResult = await new Promise((resolve) => {
+      googleAuthResolve = resolve;
+      
+      const winOptions = {
+        width: 450,
+        height: 600,
+        parent: mainWindow,
+        modal: true,
+        resizable: false,
+        minimizable: false,
+        maximizable: false,
+        show: false,
+        frame: true,
+        title: 'Sign in with Google',
+        webPreferences: {
+          preload: path.join(__dirname, 'preload.js'),
+          contextIsolation: true,
+          nodeIntegration: false
+        }
+      };
+      
+      googleWin = new BrowserWindow(winOptions);
+      googleWin.setMenu(null);
+      
+      if (isDeveloperPC) {
+        googleWin.loadFile(path.join(__dirname, 'src', 'pages', 'google-login.html'));
+      } else {
+        googleWin.loadURL(`${CENTRAL_SERVER_URL}/pages/google-login.html`);
+      }
+      
+      googleWin.once('ready-to-show', () => {
+        googleWin.show();
+      });
+      
+      googleWin.on('closed', () => {
+        googleWin = null;
+        if (googleAuthResolve) {
+          googleAuthResolve({ success: false, error: 'Sign in cancelled' });
+          googleAuthResolve = null;
+        }
+      });
+    });
+
+    if (!googleResult || !googleResult.email) {
+      return { success: false, error: googleResult ? googleResult.error : 'Google login cancelled' };
     }
-    return res;
+
+    const { email, name } = googleResult;
+    
+    if (isDeveloperPC) {
+      const res = await handleSocialLoginHelper('google', email, name);
+      if (res.success && res.user) {
+        currentUser = res.user;
+      }
+      return res;
+    } else {
+      const res = await forwardToCentralServer('social-login', { provider: 'google', email, name });
+      if (res.success && res.user) {
+        currentUser = res.user;
+      }
+      return res;
+    }
   } else {
-    const res = await forwardToCentralServer('social-login', provider);
-    if (res.success && res.user) {
-      currentUser = res.user;
+    if (isDeveloperPC) {
+      const res = await handleSocialLoginHelper(provider);
+      if (res.success && res.user) {
+        currentUser = res.user;
+      }
+      return res;
+    } else {
+      const res = await forwardToCentralServer('social-login', provider);
+      if (res.success && res.user) {
+        currentUser = res.user;
+      }
+      return res;
     }
-    return res;
   }
 });
 
@@ -619,6 +708,7 @@ ipcMain.handle('logout', async () => {
 });
 
 ipcMain.handle('get-current-user', () => {
+  console.log('[DEBUG] getCurrentUser called. currentUser is:', currentUser ? `${currentUser.name} (${currentUser.email}), isAdmin=${currentUser.isAdmin}` : 'null');
   if (currentUser) {
     return { success: true, user: currentUser };
   }
@@ -638,9 +728,11 @@ ipcMain.handle('auto-login-admin', async () => {
     try {
       console.log('Developer PC detected. Auto-logging in to Render Central Server...');
       const res = await forwardToCentralServer('login', { email: 'admin@atikmeet.com', password: 'admin123' });
+      console.log('[DEBUG] forwardToCentralServer response:', res);
       if (res.success && res.user) {
-        currentUser = res.user;
-        return { success: true, user: res.user };
+        currentUser = res.user.user || res.user;
+        console.log('[DEBUG] currentUser set from Render server:', currentUser.email);
+        return { success: true, user: currentUser };
       }
     } catch (err) {
       console.error('Auto-login to Central Server failed:', err.message);
@@ -651,10 +743,12 @@ ipcMain.handle('auto-login-admin', async () => {
     const admin = db.getAllUsers().find(u => u.isAdmin);
     if (admin) {
       currentUser = admin;
+      console.log('[DEBUG] currentUser set from local db:', currentUser.email);
       return { success: true, user: { ...admin, password: undefined } };
     }
   }
-  return { success: false };
+  console.log('[DEBUG] auto-login-admin failed entirely');
+  return { success: false, error: 'Auto login failed' };
 });
 
 // ─── Profile ───

@@ -93,24 +93,27 @@ function getTrialStatusHelper(userId) {
   }
 }
 
-function handleSocialLogin(provider) {
+function handleSocialLogin(provider, email, name) {
   try {
     const providerUpper = provider.charAt(0).toUpperCase() + provider.slice(1);
-    const mockEmail = `atik.${provider}@atikmeet.com`;
-    const mockName = `Atik ${providerUpper}`;
+    const targetEmail = email || `atik.${provider}@atikmeet.com`;
+    const targetName = name || `Atik ${providerUpper}`;
     
-    let user = db.db.get('users').find({ email: mockEmail }).value();
+    let user = db.db.get('users').find({ email: targetEmail }).value();
     if (!user) {
       const result = db.createUser({
-        name: mockName,
-        email: mockEmail,
+        name: targetName,
+        email: targetEmail,
         password: 'sociallogin123'
       });
       if (result.success && result.user) {
-        user = db.db.get('users').find({ email: mockEmail }).value();
+        user = db.db.get('users').find({ email: targetEmail }).value();
       } else {
         return { success: false, error: result.error || 'Failed to create social account' };
       }
+    } else if (name && user.name !== name) {
+      db.updateUser(user.id, { name });
+      user = db.db.get('users').find({ email: targetEmail }).value();
     }
     
     if (user.isBanned) {
@@ -173,8 +176,12 @@ const server = http.createServer((req, res) => {
           }
         }
         else if (channel === 'social-login') {
-          const provider = args[0];
-          result = handleSocialLogin(provider);
+          const data = args[0];
+          if (data && typeof data === 'object') {
+            result = handleSocialLogin(data.provider, data.email, data.name);
+          } else {
+            result = handleSocialLogin(data);
+          }
         }
         else if (channel === 'logout') {
           result = { success: true };
