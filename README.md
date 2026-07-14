@@ -69,8 +69,7 @@ Get the latest version of AtikMeet and start hosting your meetings instantly:
 
 If you need any support, customized features, or license activation keys, feel free to contact us:
 
-*   **📧 Developer Email:** [admin@atikmeet.com](mailto:admin@atikmeet.com)
-*   **📱 WhatsApp / Phone:** `+880 XXX-XXXXXX` (আপনার নম্বরটি এখানে বসিয়ে দিন)
+*   **📧 Developer Email:** [atiksoykot979@gmail.com](mailto:atiksoykot979@gmail.com)
 *   **🏢 Developed By:** **Atik Shahriar**
 
 ---
