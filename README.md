@@ -197,6 +197,48 @@ To run a remote signaling node, you can run the background server process silent
 
 ---
 
+## ⌨️ Keyboard Shortcuts (কীবোর্ড শর্টকাট)
+
+AtikMeet supports native keyboard shortcuts during active calls to quickly toggle media:
+
+| Command | Shortcut | Action |
+| :--- | :---: | :---: |
+| **Mute/Unmute Microphone** | `Ctrl + D` | Instantly toggles your local microphone feed. |
+| **Video On/Off** | `Ctrl + E` | Toggles your local webcam video stream. |
+
+---
+
+## 💻 System Requirements (সিস্টেমের প্রয়োজনীয়তা)
+
+To run the AtikMeet Desktop client smoothly, ensure your machine meets the following:
+
+*   **Operating System:** Windows 10 or Windows 11 (64-bit).
+*   **Processor:** Intel Core i3 / AMD Ryzen 3 or higher.
+*   **Memory:** 4 GB RAM minimum.
+*   **Network:** Stable internet connection (broadband or 4G LTE recommended for 1080p screen sharing).
+*   **Hardware:** Audio inputs (mic) and camera inputs (webcam).
+
+---
+
+## ❓ Frequently Asked Questions (FAQ)
+
+<details>
+<summary><b>1. Is my video call secure?</b></summary>
+Yes! AtikMeet uses secure Peer-to-Peer (P2P) connections. Audio and video packets flow directly between your and your participants' machines without being processed by any intermediary server.
+</details>
+
+<details>
+<summary><b>2. How can my friends join without installing the app?</b></summary>
+Your friends do not need to install anything. They can simply click the meeting URL you share, and join directly from Chrome, Firefox, Safari, or Brave browsers on their phone or PC.
+</details>
+
+<details>
+<summary><b>3. Where are call recordings saved?</b></summary>
+All screen and call recordings are saved locally on your local computer to guarantee maximum privacy. They are never uploaded to any remote server.
+</details>
+
+---
+
 ## 🤝 Contribution Guidelines
 
 We welcome contributions from the open-source developer community! If you wish to improve AtikMeet, please follow these guidelines:
