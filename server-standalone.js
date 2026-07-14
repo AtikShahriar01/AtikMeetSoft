@@ -188,7 +188,7 @@ const server = http.createServer((req, res) => {
           const meetingId = helpers.generateMeetingId();
           const createRes = db.createMeeting({ id: meetingId, hostId, hostName });
           if (createRes.success && createRes.meeting) {
-            const meetingLink = `http://${CENTRAL_SERVER_IP}:${SIGNALING_PORT}/meeting/${meetingId}`;
+            const meetingLink = `${CENTRAL_SERVER_URL}/meeting/${meetingId}`;
             result = { success: true, meeting: createRes.meeting, meetingLink, meetingId };
           } else {
             result = { success: false, error: createRes.error };

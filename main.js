@@ -17,9 +17,9 @@ let currentUser = null;
 let db = null;
 let isLocalhost = true; // Default admin mode for host
 
-const CENTRAL_SERVER_IP = '192.168.0.101'; // Atik Shahriar's development PC LAN IP
+const CENTRAL_SERVER_IP = '192.168.0.101'; // Fallback LAN IP
 const SIGNALING_PORT = 3478;
-const CENTRAL_SERVER_URL = `http://${CENTRAL_SERVER_IP}:${SIGNALING_PORT}`;
+const CENTRAL_SERVER_URL = 'https://atikmeetsoft.onrender.com';
 
 // Detects if the current running PC is the central server host
 let isDeveloperPC = false;
@@ -145,7 +145,7 @@ function initSignalingServer() {
               const meetingId = helpers.generateMeetingId();
               const createRes = db.createMeeting({ id: meetingId, hostId, hostName });
               if (createRes.success && createRes.meeting) {
-                const meetingLink = `http://${CENTRAL_SERVER_IP}:${SIGNALING_PORT}/meeting/${meetingId}`;
+                const meetingLink = `${CENTRAL_SERVER_URL}/meeting/${meetingId}`;
                 result = { success: true, meeting: createRes.meeting, meetingLink, meetingId };
               } else {
                 result = { success: false, error: createRes.error };
