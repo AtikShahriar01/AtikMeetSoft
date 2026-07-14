@@ -1158,7 +1158,7 @@ ipcMain.handle('get-system-info', () => {
   };
 });
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 
 // Helper function to download file over HTTPS/HTTP with progress monitoring
 function downloadFile(fileUrl, destPath, onProgress) {
