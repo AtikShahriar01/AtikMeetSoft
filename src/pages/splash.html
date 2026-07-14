@@ -45,7 +45,7 @@
           // Attempt auto-login as admin
           const autoLogin = await window.electronAPI.autoLoginAdmin();
           if (autoLogin.success) {
-            window.electronAPI.navigate('home');
+            window.electronAPI.navigate('admin');
             return;
           }
         }
