@@ -1,0 +1,230 @@
+.license-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 30px);
+  margin-top: 30px;
+  background: radial-gradient(circle at center, #1b1b36 0%, #0d0d17 100%);
+  color: var(--text-primary);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.license-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 40px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px);
+  background: rgba(26, 26, 46, 0.4);
+  text-align: center;
+  animation: slideUp 0.5s ease;
+}
+
+.license-header {
+  margin-bottom: 30px;
+}
+
+.key-icon {
+  font-size: 3.2rem;
+  display: block;
+  margin-bottom: 15px;
+  animation: float 4s ease-in-out infinite;
+}
+
+.license-header h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffa502 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.license-header .subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Status Indicator Box */
+.status-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  padding: 18px;
+  border-radius: var(--radius);
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+}
+
+.trial-progress-bar-wrapper {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.trial-progress-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: 3px;
+  transform-origin: left;
+  transition: transform 0.8s cubic-bezier(0.1, 0.8, 0.1, 1);
+}
+
+/* 4 segment Key input */
+.key-inputs-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.key-input-segment {
+  width: 75px;
+  padding: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.key-input-segment:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.2);
+}
+
+.key-input-segment:disabled {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+  border-color: transparent;
+}
+
+.dash {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  font-weight: bold;
+}
+
+.help-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 25px;
+}
+
+.help-text code {
+  color: var(--accent);
+  background: rgba(0,0,0,0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.license-footer {
+  margin-top: 30px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+
+/* Loader Spinner animations */
+.license-loader {
+  padding: 20px 0;
+  margin-bottom: 20px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 212, 170, 0.1);
+  border-left-color: var(--accent);
+  border-radius: 50%;
+  margin: 0 auto 15px;
+  animation: spin 1s linear infinite;
+}
+
+.mini-progress-bar {
+  width: 150px;
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  margin: 12px auto 0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mini-progress-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+/* Success Checkmark CSS Animation */
+.activation-success-card {
+  padding: 20px;
+  margin-bottom: 20px;
+  animation: slideUp 0.3s ease;
+}
+
+.success-checkmark {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: block;
+  stroke-width: 2;
+  stroke: #2ed573;
+  stroke-miterlimit: 10;
+  box-shadow: inset 0px 0px 0px #2ed573;
+  margin: 0 auto 20px;
+  animation: fillChm .4s ease-in-out .4s forwards, scaleChm .3s ease-in-out .9s forwards;
+}
+
+.success-checkmark-circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 2;
+  stroke-miterlimit: 10;
+  stroke: #2ed573;
+  fill: none;
+  animation: strokeChm 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.success-checkmark-check {
+  transform-origin: 50% 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  stroke: #fff;
+  animation: strokeChm 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+}
+
+@keyframes strokeChm {
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes scaleChm {
+  0%, 100% { transform: none; }
+  50% { transform: scale3d(1.1, 1.1, 1); }
+}
+
+@keyframes fillChm {
+  100% { box-shadow: inset 0px 0px 0px 30px #2ed573; }
+}

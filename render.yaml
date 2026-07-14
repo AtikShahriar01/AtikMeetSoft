@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: atikmeet-server
+    runtime: node
+    plan: free
+    buildCommand: npm install --production
+    startCommand: node server-standalone.js
+    envVars:
+      - key: NODE_ENV
+        value: production

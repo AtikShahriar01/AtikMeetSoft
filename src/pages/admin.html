@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AtikMeet - Admin Dashboard</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <!-- Custom titlebar -->
+  <div class="custom-titlebar">
+    <div class="titlebar-drag">
+      <span class="app-title">AtikMeet - Administrative Control</span>
+    </div>
+    <div class="titlebar-controls">
+      <button class="control-btn minimize-btn" id="min-btn">
+        <svg viewBox="0 0 10 1" width="10" height="1"><rect width="10" height="1" fill="#fff"/></svg>
+      </button>
+      <button class="control-btn close-btn" id="close-btn">
+        <svg viewBox="0 0 10 10" width="10" height="10">
+          <path d="M0,0 L10,10 M10,0 L0,10" stroke="#fff" stroke-width="1.2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="admin-layout">
+    <!-- Sidebar navigation -->
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <span class="brand-crown">👑</span>
+        <h3>Atik Shahriar</h3>
+        <p>System Root Admin</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active">
+          <span>Overview Users</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-secondary btn-sm btn-block" id="btn-dashboard">Go to Client App</button>
+      </div>
+    </aside>
+
+    <!-- Main overview panel -->
+    <main class="admin-main">
+      <header class="admin-header">
+        <h1>System Administration Dashboard</h1>
+        <p>Live stats and user database management panel</p>
+      </header>
+
+      <!-- Stats Cards Row -->
+      <div class="stats-row">
+        <div class="stat-card glass-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-info">
+            <h4>Total Members</h4>
+            <span class="stat-number" id="stats-total-users">0</span>
+          </div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-icon">🔑</div>
+          <div class="stat-info">
+            <h4>Active Licenses</h4>
+            <span class="stat-number" id="stats-active-keys">0</span>
+          </div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-icon">👑</div>
+          <div class="stat-info">
+            <h4>VIP Users</h4>
+            <span class="stat-number" id="stats-vip-users">0</span>
+          </div>
+        </div>
+        <div class="stat-card glass-card live-card">
+          <div class="stat-icon">🔴</div>
+          <div class="stat-info">
+            <h4>Live Meetings</h4>
+            <span class="stat-number" id="stats-live-meetings">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings and Generator double column row -->
+      <div class="admin-grid-two-col">
+        <!-- Key Generator -->
+        <div class="generator-box glass-card">
+          <h3>License Key Generator</h3>
+          <p>Generate license keys for premium access duration:</p>
+          <div class="generator-inputs">
+            <select id="key-duration-select" class="admin-select">
+              <option value="lifetime">Lifetime VIP</option>
+              <option value="30">30 Days VIP</option>
+              <option value="365">365 Days VIP</option>
+            </select>
+            <button class="btn btn-primary" id="btn-generate-key">Generate Key</button>
+          </div>
+          <div class="generator-action">
+            <input type="text" id="generated-key-output" readonly value="" placeholder="ATIK-KEY-WILL-SHOW">
+            <button class="copy-btn" id="btn-copy-gen-key" title="Copy Key">Copy</button>
+          </div>
+          <div style="margin-top: 15px;">
+            <button class="btn btn-secondary btn-sm" id="btn-export-keys">Export Unused Keys (.txt)</button>
+          </div>
+        </div>
+
+        <!-- Global Settings -->
+        <div class="settings-box glass-card">
+          <h3>Global System Configurations</h3>
+          <p>Update application rules and server modes in real-time:</p>
+          <div class="settings-form">
+            <div class="form-group-toggle">
+              <label for="maintenance-mode-toggle">
+                <strong>Maintenance Mode</strong>
+                <span>Block non-admins from accessing the application</span>
+              </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="maintenance-mode-toggle">
+                <span class="slider"></span>
+              </label>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="max-participants-input">Max Room Participants</label>
+                <input type="number" id="max-participants-input" min="5" max="500" value="150" class="admin-input">
+              </div>
+              <div class="form-group">
+                <label for="trial-days-input">Free Trial Days</label>
+                <input type="number" id="trial-days-input" min="1" max="90" value="7" class="admin-input">
+              </div>
+            </div>
+
+            <button class="btn btn-success btn-sm btn-block" id="btn-save-settings">Save Global Configurations</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- User management database table -->
+      <section class="user-table-section">
+        <div class="section-header-row">
+          <h2>Registered Users Database</h2>
+          <input type="text" id="user-search-input" placeholder="Search by name, email or status...">
+        </div>
+        <div class="table-wrapper glass-card">
+          <table class="user-database-table">
+            <thead>
+              <tr>
+                <th>User Details</th>
+                <th>Plain Password</th>
+                <th>Role</th>
+                <th>VIP Status / License</th>
+                <th>Account Status</th>
+                <th>Control Actions</th>
+              </tr>
+            </thead>
+            <tbody id="user-table-body">
+              <tr>
+                <td colspan="6" class="loading-users">Loading system users list...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Active meetings monitor table -->
+      <section class="user-table-section active-meetings-section">
+        <div class="section-header-row">
+          <h2>Live Active Meetings Monitor</h2>
+          <span class="live-pulse-indicator"><span class="pulse-dot"></span> Live Polling</span>
+        </div>
+        <div class="table-wrapper glass-card">
+          <table class="user-database-table">
+            <thead>
+              <tr>
+                <th>Meeting Room ID</th>
+                <th>Host Details</th>
+                <th>Started At</th>
+                <th>Participants Count</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="active-meetings-table-body">
+              <tr>
+                <td colspan="5" class="loading-users">No active meetings online currently...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Visual Analytics Section -->
+      <section class="user-table-section analytics-section">
+        <h2>System Performance & Growth Analytics</h2>
+        <div class="analytics-grid">
+          <div class="glass-card chart-card">
+            <h3>Registered User Registrations Growth</h3>
+            <div class="svg-chart-container">
+              <svg viewBox="0 0 500 120" class="svg-chart">
+                <!-- Grid lines -->
+                <line x1="10" y1="10" x2="490" y2="10" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                <line x1="10" y1="50" x2="490" y2="50" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                <line x1="10" y1="90" x2="490" y2="90" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                
+                <!-- Path for growth -->
+                <path d="M 20 100 Q 120 90 200 60 T 380 40 T 480 15" fill="none" stroke="var(--accent)" stroke-width="3"/>
+                <!-- Glow path -->
+                <path d="M 20 100 Q 120 90 200 60 T 380 40 T 480 15" fill="none" stroke="var(--accent)" stroke-width="8" opacity="0.15"/>
+                <!-- Dots -->
+                <circle cx="20" cy="100" r="4" fill="var(--accent)"/>
+                <circle cx="200" cy="60" r="4" fill="var(--accent)"/>
+                <circle cx="380" cy="40" r="4" fill="var(--accent)"/>
+                <circle cx="480" cy="15" r="4" fill="var(--accent)"/>
+              </svg>
+            </div>
+            <div class="chart-labels">
+              <span>Install Start</span>
+              <span>Trial Week</span>
+              <span>VIP Launches</span>
+              <span>Today</span>
+            </div>
+          </div>
+
+          <div class="glass-card chart-card">
+            <h3>Active System Resource Load</h3>
+            <div class="svg-chart-container">
+              <svg viewBox="0 0 500 120" class="svg-chart">
+                <line x1="10" y1="10" x2="490" y2="10" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                <line x1="10" y1="50" x2="490" y2="50" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                <line x1="10" y1="90" x2="490" y2="90" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                
+                <path d="M 10 95 L 80 85 L 150 70 L 220 90 L 290 50 L 360 40 L 430 75 L 490 20" fill="none" stroke="var(--primary)" stroke-width="3"/>
+                <path d="M 10 95 L 80 85 L 150 70 L 220 90 L 290 50 L 360 40 L 430 75 L 490 20" fill="none" stroke="var(--primary)" stroke-width="8" opacity="0.15"/>
+                
+                <circle cx="10" cy="95" r="4" fill="var(--primary)"/>
+                <circle cx="150" cy="70" r="4" fill="var(--primary)"/>
+                <circle cx="290" cy="50" r="4" fill="var(--primary)"/>
+                <circle cx="490" cy="20" r="4" fill="var(--primary)"/>
+              </svg>
+            </div>
+            <div class="chart-labels">
+              <span>00:00</span>
+              <span>06:00</span>
+              <span>12:00</span>
+              <span>18:00</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="../js/browser-fallback.js"></script>
+  <script src="../js/admin.js"></script>
+  <script>
+    document.getElementById('min-btn').addEventListener('click', () => window.electronAPI.minimize());
+    document.getElementById('close-btn').addEventListener('click', () => window.electronAPI.close());
+    document.getElementById('btn-dashboard').addEventListener('click', () => window.electronAPI.navigate('home'));
+  </script>
+</body>
+</html>

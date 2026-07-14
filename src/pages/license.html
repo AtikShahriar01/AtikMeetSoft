@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AtikMeet - License Activation</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/license.css">
+</head>
+<body>
+  <!-- Custom titlebar -->
+  <div class="custom-titlebar">
+    <div class="titlebar-drag">
+      <span class="app-title">AtikMeet - Licensing</span>
+    </div>
+    <div class="titlebar-controls">
+      <button class="control-btn minimize-btn" id="min-btn">
+        <svg viewBox="0 0 10 1" width="10" height="1"><rect width="10" height="1" fill="#fff"/></svg>
+      </button>
+      <button class="control-btn close-btn" id="close-btn">
+        <svg viewBox="0 0 10 10" width="10" height="10">
+          <path d="M0,0 L10,10 M10,0 L0,10" stroke="#fff" stroke-width="1.2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="license-layout">
+    <div class="license-card glass-card">
+      <div class="license-header">
+        <span class="key-icon">🔑</span>
+        <h2>Activate VIP Premium License</h2>
+        <p class="subtitle">Enter license key to unlock permanent VIP benefits and unlimited daily meets</p>
+      </div>
+
+      <!-- Current status card -->
+      <div class="status-box" id="status-box">
+        <div class="status-indicator" id="status-indicator">
+          <span id="status-icon">⏳</span>
+          <span id="status-text">Checking status...</span>
+        </div>
+        <div class="trial-progress-bar-wrapper" id="progress-wrapper" style="display:none;">
+          <div class="trial-progress-bar" id="trial-progress"></div>
+        </div>
+      </div>
+
+      <!-- Verification Loader (Hidden by default) -->
+      <div class="license-loader" id="license-loader" style="display: none;">
+        <div class="spinner"></div>
+        <p id="loader-status-text">Verifying Activation Key...</p>
+        <div class="mini-progress-bar"><div class="mini-progress-fill" id="mini-fill"></div></div>
+      </div>
+
+      <!-- Success Animation (Hidden by default) -->
+      <div class="activation-success-card" id="activation-success-card" style="display: none;">
+        <svg class="success-checkmark" viewBox="0 0 52 52">
+          <circle class="success-checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+          <path class="success-checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+        </svg>
+        <h3>License Activated Successfully!</h3>
+        <p>Your software is now permanently activated with VIP Premium features.</p>
+      </div>
+
+      <!-- Activation Form -->
+      <form id="license-form">
+        <div class="key-inputs-row">
+          <input type="text" class="key-input-segment" value="ATIK" disabled>
+          <span class="dash">-</span>
+          <input type="text" class="key-input-segment" id="key-seg-1" maxlength="4" placeholder="XXXX" required>
+          <span class="dash">-</span>
+          <input type="text" class="key-input-segment" id="key-seg-2" maxlength="4" placeholder="XXXX" required>
+          <span class="dash">-</span>
+          <input type="text" class="key-input-segment" id="key-seg-3" maxlength="4" placeholder="XXXX" required>
+        </div>
+        
+        <p class="help-text">Try demo key: <code>ATIK-DEMO-2024-FREE</code> for testing.</p>
+
+        <button type="submit" class="btn btn-primary btn-block" id="btn-activate-submit">
+          <span>Activate License</span>
+        </button>
+      </form>
+
+      <div class="license-footer">
+        <button class="btn btn-secondary btn-sm" id="btn-back">Go to Dashboard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Canvas for Confetti animation -->
+  <canvas id="confetti-canvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:999; display:none;"></canvas>
+
+  <script src="../js/browser-fallback.js"></script>
+  <script src="../js/license.js"></script>
+  <script>
+    // Titlebar event handlers
+    document.getElementById('min-btn').addEventListener('click', () => window.electronAPI.minimize());
+    document.getElementById('close-btn').addEventListener('click', () => window.electronAPI.close());
+    document.getElementById('btn-back').addEventListener('click', () => window.electronAPI.navigate('home'));
+  </script>
+</body>
+</html>

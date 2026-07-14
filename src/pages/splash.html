@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AtikMeet</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/splash.css">
+</head>
+<body>
+  <div class="splash-container">
+    <div class="logo-container">
+      <!-- Colorful modern SVG Video Camera Logo -->
+      <svg class="splash-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1a73e8" />
+            <stop offset="100%" stop-color="#00d4aa" />
+          </linearGradient>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <shadow>0 0 15px rgba(26,115,232,0.5)</shadow>
+          </filter>
+        </defs>
+        <rect x="15" y="25" width="48" height="48" rx="12" fill="url(#logoGrad)" />
+        <polygon points="68,35 88,45 88,55 68,65" fill="url(#logoGrad)" />
+        <circle cx="39" cy="49" r="8" fill="#ffffff" opacity="0.9" />
+      </svg>
+    </div>
+    <h1 class="splash-title">AtikMeet</h1>
+    <p class="splash-subtitle">Premium Video Conferencing</p>
+    <div class="loader">
+      <div class="loader-bar"></div>
+    </div>
+    <p class="splash-developer">Developed by Atik Shahriar</p>
+  </div>
+
+  <script src="../js/browser-fallback.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check if we are running on localhost (admin mode)
+      const isLocalhost = await window.electronAPI.isLocalhost();
+      
+      setTimeout(async () => {
+        if (isLocalhost) {
+          // Attempt auto-login as admin
+          const autoLogin = await window.electronAPI.autoLoginAdmin();
+          if (autoLogin.success) {
+            window.electronAPI.navigate('home');
+            return;
+          }
+        }
+        
+        // Otherwise, go to login screen
+        window.electronAPI.navigate('login');
+      }, 3000);
+    });
+  </script>
+</body>
+</html>

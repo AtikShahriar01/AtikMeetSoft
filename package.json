@@ -1,0 +1,27 @@
+{
+  "name": "atikmeet",
+  "version": "1.0.0",
+  "description": "AtikMeet - Professional Video Conferencing Desktop App by Atik Shahriar",
+  "main": "main.js",
+  "author": "Atik Shahriar",
+  "license": "MIT",
+  "scripts": {
+    "start": "node server-standalone.js",
+    "desktop": "electron .",
+    "make": "electron-forge make"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "lowdb": "^1.0.0",
+    "socket.io": "^4.7.4",
+    "socket.io-client": "^4.7.4",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.2.0",
+    "@electron-forge/maker-squirrel": "^7.2.0",
+    "@electron-forge/maker-zip": "^7.2.0",
+    "electron": "^28.1.0",
+    "png-to-ico": "^3.0.2"
+  }
+}

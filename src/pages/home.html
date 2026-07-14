@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AtikMeet - Dashboard</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/home.css">
+</head>
+<body>
+  <!-- Frameless titlebar -->
+  <div class="custom-titlebar">
+    <div class="titlebar-drag">
+      <span class="app-title">AtikMeet</span>
+    </div>
+    <div class="titlebar-controls">
+      <button class="control-btn minimize-btn" id="min-btn">
+        <svg viewBox="0 0 10 1" width="10" height="1"><rect width="10" height="1" fill="#fff"/></svg>
+      </button>
+      <button class="control-btn maximize-btn" id="max-btn">
+        <svg viewBox="0 0 10 10" width="10" height="10"><rect width="8" height="8" x="1" y="1" fill="none" stroke="#fff" stroke-width="1.2"/></svg>
+      </button>
+      <button class="control-btn close-btn" id="close-btn">
+        <svg viewBox="0 0 10 10" width="10" height="10">
+          <path d="M0,0 L10,10 M10,0 L0,10" stroke="#fff" stroke-width="1.2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <!-- Collapsible Sidebar -->
+    <aside class="sidebar">
+      <div class="user-profile-section">
+        <div class="avatar-container">
+          <div class="user-avatar" id="profile-avatar">A</div>
+          <span class="vip-badge-icon" id="vip-badge-icon" title="Premium VIP" style="display:none;">⭐</span>
+        </div>
+        <h3 id="user-display-name">Loading...</h3>
+        <p id="user-display-role" class="role-text">User</p>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" id="nav-home">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-profile">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>My Profile</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-license">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>License Activation</span>
+        </a>
+        <a href="#" class="nav-item admin-only" id="nav-admin" style="display: none;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+          <span>Admin Panel</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-secondary btn-block logout-btn" id="logout-btn">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Panel -->
+    <main class="content-panel">
+      <!-- Trial/License Notification bar -->
+      <div class="license-banner" id="license-banner">
+        <div class="banner-content">
+          <span class="banner-icon">🔔</span>
+          <span class="banner-text" id="license-banner-text">Checking trial status...</span>
+        </div>
+        <button class="btn btn-primary btn-sm" id="banner-activate-btn">Upgrade Now</button>
+      </div>
+
+      <header class="content-header">
+        <div class="welcome-section">
+          <h1 id="welcome-text">Welcome back, Atik!</h1>
+          <p id="current-date">Monday, July 13, 2026</p>
+        </div>
+        <div class="vip-status-container" id="vip-status-container" style="display: none;">
+          <span class="vip-badge">PREMIUM VIP MEMBER ⭐</span>
+        </div>
+      </header>
+
+      <!-- Action Panel Grid -->
+      <div class="dashboard-grid">
+        <!-- Create Meeting Card -->
+        <div class="glass-card action-card">
+          <div class="card-icon gradient-blue">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          </div>
+          <h3>Start New Meeting</h3>
+          <p>Get a unique meeting link to invite up to 150 people with 1080p screen sharing.</p>
+          <button class="btn btn-primary" id="btn-create-meeting">Create Meeting</button>
+
+          <!-- Generated Link Area (Hidden initially) -->
+          <div class="meeting-link-box" id="meeting-link-box" style="display: none;">
+            <div class="link-input-wrapper">
+              <input type="text" id="meeting-link-input" readonly value="">
+              <button class="copy-btn" id="btn-copy-link" title="Copy Link">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+            <button class="btn btn-success btn-sm btn-block" id="btn-open-browser" style="margin-top: 10px;">
+              <span>Open & Join Meeting in Browser</span>
+            </button>
+            <button class="btn btn-primary btn-sm btn-block" id="btn-join-created" style="margin-top: 10px;">
+              <span>Join via Native App</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Join Meeting Card -->
+        <div class="glass-card action-card">
+          <div class="card-icon gradient-teal">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+          </div>
+          <h3>Join an Existing Meeting</h3>
+          <p>Paste a meeting link or code here to jump right into a video conference.</p>
+          <div class="join-input-wrapper">
+            <input type="text" id="join-meeting-input" placeholder="Enter meeting code or link">
+            <button class="btn btn-primary" id="btn-join-meeting">Join</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Meetings Table -->
+      <section class="recent-meetings-section">
+        <h2>Recent Meetings</h2>
+        <div class="table-wrapper glass-card">
+          <table class="recent-meetings-table">
+            <thead>
+              <tr>
+                <th>Meeting ID</th>
+                <th>Host</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="meetings-table-body">
+              <tr>
+                <td colspan="5" class="empty-row">No meetings found. Start a new one!</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Dashboard Footer -->
+      <footer class="dashboard-footer">
+        <div class="security-badge">
+          <span class="lock-icon">🔒</span>
+          <span>End-to-End Encrypted (AES-256-GCM)</span>
+        </div>
+        <div class="app-version-info">
+          <span>AtikMeet Client v1.0.0</span>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <script src="../js/browser-fallback.js"></script>
+  <script src="../js/home.js"></script>
+  <script>
+    // Titlebar event handlers
+    const minBtn = document.getElementById('min-btn');
+    const maxBtn = document.getElementById('max-btn');
+    const closeBtn = document.getElementById('close-btn');
+
+    minBtn.addEventListener('click', () => window.electronAPI.minimize());
+    maxBtn.addEventListener('click', async () => {
+      await window.electronAPI.maximize();
+    });
+    closeBtn.addEventListener('click', () => window.electronAPI.close());
+  </script>
+</body>
+</html>

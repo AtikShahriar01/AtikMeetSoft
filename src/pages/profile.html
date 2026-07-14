@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AtikMeet - Profile</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/profile.css">
+</head>
+<body>
+  <!-- Custom titlebar -->
+  <div class="custom-titlebar">
+    <div class="titlebar-drag">
+      <span class="app-title">AtikMeet - Profile</span>
+    </div>
+    <div class="titlebar-controls">
+      <button class="control-btn minimize-btn" id="min-btn">
+        <svg viewBox="0 0 10 1" width="10" height="1"><rect width="10" height="1" fill="#fff"/></svg>
+      </button>
+      <button class="control-btn close-btn" id="close-btn">
+        <svg viewBox="0 0 10 10" width="10" height="10">
+          <path d="M0,0 L10,10 M10,0 L0,10" stroke="#fff" stroke-width="1.2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="profile-layout">
+    <div class="profile-card glass-card">
+      <div class="profile-header-details">
+        <div class="profile-avatar-large" id="avatar-char">A</div>
+        <h2 id="profile-name">Atik Shahriar</h2>
+        <p id="profile-email">admin@atikmeet.com</p>
+        
+        <div class="vip-tag" id="vip-status-tag" style="display: none;">
+          👑 PREMIUM VIP MEMBER
+        </div>
+      </div>
+
+      <!-- Stats section -->
+      <div class="stats-row">
+        <div class="stat-item">
+          <span class="stat-val" id="stat-meetings">0</span>
+          <span class="stat-lbl">Total Meets</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val" id="stat-duration">0m</span>
+          <span class="stat-lbl">Duration</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val" id="stat-license">Trial</span>
+          <span class="stat-lbl">License Status</span>
+        </div>
+      </div>
+
+      <!-- Edit profile form -->
+      <form id="profile-form">
+        <h3>Edit Profile Settings</h3>
+        <div class="input-group">
+          <label for="edit-name">Display Name</label>
+          <input type="text" id="edit-name" placeholder="Name" required>
+        </div>
+        <div class="input-group">
+          <label for="edit-password">New Password (leave empty to keep current)</label>
+          <input type="password" id="edit-password" placeholder="••••••••">
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block" id="btn-save-profile">
+          <span>Save Changes</span>
+        </button>
+      </form>
+
+      <div class="profile-footer">
+        <button class="btn btn-secondary btn-sm" id="btn-back-home">Back to Dashboard</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/browser-fallback.js"></script>
+  <script src="../js/profile.js"></script>
+  <script>
+    document.getElementById('min-btn').addEventListener('click', () => window.electronAPI.minimize());
+    document.getElementById('close-btn').addEventListener('click', () => window.electronAPI.close());
+    document.getElementById('btn-back-home').addEventListener('click', () => window.electronAPI.navigate('home'));
+  </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+out/
+data/
+*.log
+server.log
+.env
+.DS_Store
+Thumbs.db
+*.exe
+forge.config.js
