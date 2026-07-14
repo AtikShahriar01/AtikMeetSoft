@@ -175,15 +175,15 @@ npm run make
 
 ---
 
-## 🛡️ Admin Panel & Default Credentials
+## 🛡️ Admin Panel & Shared License Keys
 
-AtikMeet provides an administrative interface to monitor system statuses and manage licensing.
+AtikMeet provides a robust administrative interface to monitor active meetings and manage user accounts.
 
 *   **Default Admin Email:** `admin@atikmeet.com`
-*   **Default Admin Password:** `admin123`
-*   **Default Admin Key:** `ATIK-ADMIN-VIP-2026`
+*   **Default Admin Password:** *(Customized for security)*
+*   **Shared Public Activation Key:** `ATIK-FREE-PUBLIC-2026` (Allows multiple users to activate their software simultaneously).
 
-*To secure the app for production, modify these default credentials inside the configuration panel.*
+To access the administrator tools, log in using the admin account on your host PC. Users who wish to bypass the trial countdown can activate using the shared public key, which will register their account in the admin dashboard user list.
 
 ---
 

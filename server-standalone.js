@@ -347,7 +347,7 @@ try {
     const adminResult = db.createUser({
       name: 'Atik Shahriar',
       email: 'admin@atikmeet.com',
-      password: 'admin123'
+      password: 'atikadmin2026'
     });
     if (adminResult.success) {
       db.updateUser(adminResult.user.id, { isAdmin: true, isVIP: true });

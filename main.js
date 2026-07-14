@@ -365,7 +365,7 @@ app.whenReady().then(() => {
         const result = db.createUser({ 
           name: 'Atik Shahriar', 
           email: 'admin@atikmeet.com', 
-          password: 'admin123' 
+          password: 'atikadmin2026' 
         });
         if (result.success && result.user) {
           db.updateUser(result.user.id, { 

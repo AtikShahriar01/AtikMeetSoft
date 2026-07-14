@@ -77,6 +77,14 @@ if (keys.length === 0 || !keys.find(k => k.key === 'ATIK-DEMO-2024-FREE')) {
       activatedAt: null
     },
     {
+      key: 'ATIK-FREE-PUBLIC-2026',
+      createdAt: new Date().toISOString(),
+      isActive: false,
+      assignedTo: null,
+      activatedAt: null,
+      isShared: true
+    },
+    {
       key: 'ATIK-ADMIN-VIP-2026',
       createdAt: new Date().toISOString(),
       isActive: false,
@@ -449,8 +457,9 @@ function activateLicense(userId, key) {
       return { success: false, error: 'License key not found.' };
     }
 
-    // Check if key is already activated by another user
-    if (licenseRecord.isActive && licenseRecord.assignedTo !== userId) {
+    // Check if key is already activated by another user (skip check for shared/public keys)
+    const isSharedKey = licenseRecord.isShared || normalizedKey.includes('FREE') || normalizedKey.includes('DEMO') || normalizedKey.includes('PUBLIC');
+    if (!isSharedKey && licenseRecord.isActive && licenseRecord.assignedTo !== userId) {
       return { success: false, error: 'This license key is already in use by another user.' };
     }
 
@@ -475,7 +484,7 @@ function activateLicense(userId, key) {
       .find({ key: normalizedKey })
       .assign({
         isActive: true,
-        assignedTo: userId,
+        assignedTo: isSharedKey ? 'multiple_users' : userId,
         activatedAt: new Date().toISOString(),
         expiresAt: expiresAt
       })
