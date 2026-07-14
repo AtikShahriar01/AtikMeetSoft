@@ -1209,7 +1209,8 @@ ipcMain.handle('check-for-updates', async () => {
     };
 
     if (data && data.version && semverCompare(data.version, APP_VERSION) > 0) {
-      return { updateAvailable: true, version: data.version, url: data.url };
+      const url = data.url || `https://github.com/AtikShahriar01/AtikMeetSoft/releases/download/v${data.version}/AtikMeet-${data.version} Setup.exe`;
+      return { updateAvailable: true, version: data.version, url };
     }
     return { updateAvailable: false };
   } catch (err) {
@@ -1227,15 +1228,16 @@ ipcMain.handle('start-update', async (event) => {
     if (!checkRes.ok) throw new Error('Failed to retrieve update URL');
     const data = await checkRes.json();
     
-    if (!data || !data.url) throw new Error('Update URL not specified in version file');
+    let downloadUrl = data.url || (data.version ? `https://github.com/AtikShahriar01/AtikMeetSoft/releases/download/v${data.version}/AtikMeet-${data.version} Setup.exe` : null);
+    if (!downloadUrl) throw new Error('Update URL could not be determined');
     
     isUpdating = true;
     const tempDir = app.getPath('temp');
     const installerPath = path.join(tempDir, 'atikmeet-setup.exe');
     
-    console.log(`[Update] Starting download from ${data.url} to ${installerPath}`);
+    console.log(`[Update] Starting download from ${downloadUrl} to ${installerPath}`);
     
-    await downloadFile(data.url, installerPath, (progress) => {
+    await downloadFile(downloadUrl, installerPath, (progress) => {
       if (mainWindow) {
         mainWindow.webContents.send('update-progress', progress);
       }
