@@ -5,8 +5,8 @@
 <h1 align="center">🌐 AtikMeet</h1>
 
 <p align="center">
-  <strong>Next-Gen Self-Hosted Video Conferencing Desktop & Background Signaling Server</strong><br>
-  <em>Secure Peer-to-Peer communications, high-definition screen sharing, live recording, and robust administration panel.</em>
+  <strong>Next-Generation, Self-Hosted Video Conferencing Desktop App & Background Server</strong><br>
+  <em>Secure Peer-to-Peer calls, 1080p dynamic screen sharing, full-duplex audio, and granular moderator configurations.</em>
 </p>
 
 <p align="center">
@@ -32,11 +32,14 @@
 
 ## 📖 Table of Contents
 *   [🌟 Why Choose AtikMeet?](#-why-choose-atikmeet)
+*   [🎨 Core User Interface Mockups](#-core-user-interface-mockups)
 *   [🚀 Core & Advanced Features](#-core--advanced-features)
-*   [📊 AtikMeet vs Zoom vs Google Meet](#-atikmeet-vs-zoom-vs-google-meet)
+*   [⚙️ Technical Specifications & Codecs](#-technical-specifications--codecs)
+*   [📊 Feature Comparison Matrix](#-feature-comparison-matrix)
 *   [📥 Quick Installation & Run](#-quick-installation--run)
-*   [🛡️ Admin panel & Security](#-admin-panel--security)
+*   [🛡️ Admin Panel & Default Credentials](#-admin-panel--default-credentials)
 *   [💾 Standalone Server Setup](#-standalone-server-setup)
+*   [🤝 Contribution Guidelines](#-contribution-guidelines)
 *   [📧 Contact & Support](#-contact--support)
 
 ---
@@ -46,6 +49,42 @@
 AtikMeet provides a zero-compromise video communication experience. By combining **WebRTC peer-to-peer data channels** with the robust capabilities of an **Electron native wrapper**, it enables secure, fast, and completely free meetings. 
 
 Unlike public calling applications, AtikMeet allows you to host private signaling servers and manage participant licensing, giving you full control over who joins and how data flows.
+
+---
+
+## 🎨 Core User Interface Mockups
+
+Here is a visual overview of the premium user interfaces built into the Electron client app:
+
+<table width="100%">
+  <tr>
+    <td width="50%" align="center">
+      <strong>🔐 Secure Authentication</strong><br>
+      <img src="https://raw.githubusercontent.com/AtikShahriar01/AtikMeetSoft/main/assets/login_preview_placeholder.png" alt="Login Page" style="border-radius: 8px; border: 1px solid #3b3b8f;" width="100%"><br>
+      <em>Custom slide transitions & validation.</em>
+    </td>
+    <td width="50%" align="center">
+      <strong>🏠 Central Hub Dashboard</strong><br>
+      <img src="https://raw.githubusercontent.com/AtikShahriar01/AtikMeetSoft/main/assets/home_preview_placeholder.png" alt="Home Dashboard" style="border-radius: 8px; border: 1px solid #3b3b8f;" width="100%"><br>
+      <em>Instantly start calls & join lobbies.</em>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <strong>🎥 HD Meeting Room</strong><br>
+      <img src="https://raw.githubusercontent.com/AtikShahriar01/AtikMeetSoft/main/assets/meeting_preview_placeholder.png" alt="Meeting Room" style="border-radius: 8px; border: 1px solid #3b3b8f;" width="100%"><br>
+      <em>Grid rendering with reaction flows.</em>
+    </td>
+    <td width="50%" align="center">
+      <strong>🛡️ Admin Settings</strong><br>
+      <img src="https://raw.githubusercontent.com/AtikShahriar01/AtikMeetSoft/main/assets/admin_preview_placeholder.png" alt="Admin Panel" style="border-radius: 8px; border: 1px solid #3b3b8f;" width="100%"><br>
+      <em>Banning, user listings, and keygen.</em>
+    </td>
+  </tr>
+</table>
+
+> [!NOTE]
+> *To display actual images on your GitHub repository page, upload screenshot files to the `/assets/` directory and replace these placeholder URLs.*
 
 ---
 
@@ -88,7 +127,18 @@ Unlike public calling applications, AtikMeet allows you to host private signalin
 
 ---
 
-## 📊 AtikMeet vs Zoom vs Google Meet
+## ⚙️ Technical Specifications & Codecs
+
+AtikMeet utilizes cutting-edge multimedia standards to achieve low data consumption without sacrificing quality:
+
+*   **Video Codecs:** Support for **VP8** and **H.264** with dynamic bitrate adjustment based on connection bandwidth.
+*   **Audio Codecs:** Built-in **Opus** codec configuration for full-duplex spatial audio (crystal clear audio with echo cancellation).
+*   **Encryption Protocol:** Secure media streaming using **SRTP (Secure Real-time Transport Protocol)** over DTLS.
+*   **Signaling Channel:** Secure JSON WebSockets via **Socket.io** over HTTPS.
+
+---
+
+## 📊 Feature Comparison Matrix
 
 | Feature | 🌐 AtikMeet | 👥 Google Meet | 📞 Zoom |
 | :--- | :---: | :---: | :---: |
@@ -103,7 +153,7 @@ Unlike public calling applications, AtikMeet allows you to host private signalin
 
 ## 📥 Quick Installation & Run
 
-### 1. Installation
+### 1. Development Environment Setup
 Clone the repository and install packages using your package manager:
 ```bash
 git clone https://github.com/AtikShahriar01/AtikMeetSoft.git
@@ -117,7 +167,7 @@ Run the following npm command to open the native Electron desktop shell:
 npm run desktop
 ```
 
-### 3. Packaging & Installation Installer
+### 3. Packaging & Distribution Installer
 To compile your own distributable wizard setup (`AtikMeet-[version]-Wizard-Setup.exe`):
 ```bash
 npm run make
@@ -125,9 +175,9 @@ npm run make
 
 ---
 
-## 🛡️ Admin Panel & Security
+## 🛡️ Admin Panel & Default Credentials
 
-AtikMeet provides an administrative interface to monitor system statuses and manage licensing. 
+AtikMeet provides an administrative interface to monitor system statuses and manage licensing.
 
 *   **Default Admin Email:** `admin@atikmeet.com`
 *   **Default Admin Password:** `admin123`
@@ -144,6 +194,20 @@ To run a remote signaling node, you can run the background server process silent
 1. Right-click on `setup-autostart.bat` and select **"Run as Administrator"**.
 2. The script will automatically configure inbound Windows Defender Firewall rules for TCP and UDP port `3478`.
 3. It registers `start-server-silent.vbs` to your Windows startup registry, allowing the signaling server to run silently on boot.
+
+---
+
+## 🤝 Contribution Guidelines
+
+We welcome contributions from the open-source developer community! If you wish to improve AtikMeet, please follow these guidelines:
+
+1. **Fork the Repository** on GitHub.
+2. **Create a Feature Branch** (`git checkout -b feature/AmazingFeature`).
+3. **Commit Your Changes** (`git commit -m 'Add some AmazingFeature'`).
+4. **Push to the Branch** (`git push origin feature/AmazingFeature`).
+5. **Open a Pull Request** to the `main` branch.
+
+Please ensure your code complies with modern ESLint guidelines and does not introduce hardcoded configuration parameters.
 
 ---
 
