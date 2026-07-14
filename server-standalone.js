@@ -239,6 +239,62 @@ const server = http.createServer((req, res) => {
           const actRes = db.activateLicense(userId, key);
           result = actRes;
         }
+        else if (channel === 'generate-license-key') {
+          const durationDays = args[0];
+          const key = db.generateLicenseKey(durationDays);
+          result = { success: true, key };
+        }
+        else if (channel === 'get-all-users') {
+          const users = db.getAllUsers();
+          result = { success: true, users };
+        }
+        else if (channel === 'admin-activate-license') {
+          const { userId, durationDays } = args[0] || {};
+          const key = db.generateLicenseKey(durationDays || 'lifetime');
+          const res = db.activateLicense(userId, key);
+          if (res.success) {
+            result = { success: true, key };
+          } else {
+            result = { success: false, error: res.error || 'Activation failed' };
+          }
+        }
+        else if (channel === 'admin-deactivate-license') {
+          const userId = args[0];
+          const res = db.deactivateLicense(userId);
+          result = res;
+        }
+        else if (channel === 'admin-delete-user') {
+          const userId = args[0];
+          const res = db.deleteUser(userId);
+          result = res;
+        }
+        else if (channel === 'get-admin-stats') {
+          const stats = db.getStats();
+          result = { success: true, stats };
+        }
+        else if (channel === 'get-active-meetings') {
+          const meetings = db.getActiveMeetings();
+          result = { success: true, meetings };
+        }
+        else if (channel === 'get-system-settings') {
+          const settings = db.getSettings();
+          result = { success: true, settings };
+        }
+        else if (channel === 'update-system-settings') {
+          const updates = args[0];
+          const res = db.updateSettings(updates);
+          result = res;
+        }
+        else if (channel === 'admin-toggle-ban') {
+          const { userId, isBanned } = args[0] || {};
+          const res = db.toggleUserBan(userId, isBanned);
+          result = res;
+        }
+        else if (channel === 'admin-toggle-role') {
+          const { userId, isAdmin } = args[0] || {};
+          const res = db.toggleUserRole(userId, isAdmin);
+          result = res;
+        }
         else if (channel === 'get-signaling-info') {
           result = {
             host: CENTRAL_SERVER_IP,

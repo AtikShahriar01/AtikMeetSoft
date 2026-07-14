@@ -919,9 +919,11 @@ ipcMain.handle('get-meeting-info', async (event, meetingId) => {
 });
 
 // ─── Admin ───
-ipcMain.handle('get-admin-stats', () => {
+ipcMain.handle('get-admin-stats', async () => {
   try {
     if (currentUser && currentUser.isAdmin) {
+      const res = await forwardToCentralServer('get-admin-stats');
+      if (res && res.success) return res;
       const stats = db.getStats();
       return { success: true, stats };
     }
@@ -931,9 +933,11 @@ ipcMain.handle('get-admin-stats', () => {
   }
 });
 
-ipcMain.handle('get-all-users', () => {
+ipcMain.handle('get-all-users', async () => {
   try {
     if (currentUser && currentUser.isAdmin) {
+      const res = await forwardToCentralServer('get-all-users');
+      if (res && res.success) return res;
       const users = db.getAllUsers();
       return { success: true, users };
     }
@@ -943,15 +947,17 @@ ipcMain.handle('get-all-users', () => {
   }
 });
 
-ipcMain.handle('admin-activate-license', (event, { userId, durationDays }) => {
+ipcMain.handle('admin-activate-license', async (event, { userId, durationDays }) => {
   try {
     if (currentUser && currentUser.isAdmin) {
+      const res = await forwardToCentralServer('admin-activate-license', { userId, durationDays });
+      if (res && res.success) return res;
       const key = db.generateLicenseKey(durationDays || 'lifetime');
-      const res = db.activateLicense(userId, key);
-      if (res.success) {
+      const localRes = db.activateLicense(userId, key);
+      if (localRes.success) {
         return { success: true, key };
       }
-      return { success: false, error: res.error || 'Activation failed' };
+      return { success: false, error: localRes.error || 'Activation failed' };
     }
     return { success: false, error: 'Not authorized' };
   } catch (err) {
@@ -959,14 +965,13 @@ ipcMain.handle('admin-activate-license', (event, { userId, durationDays }) => {
   }
 });
 
-ipcMain.handle('admin-deactivate-license', (event, userId) => {
+ipcMain.handle('admin-deactivate-license', async (event, userId) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = db.deactivateLicense(userId);
-      if (res.success) {
-        return { success: true };
-      }
-      return { success: false, error: res.error || 'Deactivation failed' };
+      const res = await forwardToCentralServer('admin-deactivate-license', userId);
+      if (res && res.success) return res;
+      const localRes = db.deactivateLicense(userId);
+      return localRes;
     }
     return { success: false, error: 'Not authorized' };
   } catch (err) {
@@ -974,14 +979,13 @@ ipcMain.handle('admin-deactivate-license', (event, userId) => {
   }
 });
 
-ipcMain.handle('admin-delete-user', (event, userId) => {
+ipcMain.handle('admin-delete-user', async (event, userId) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = db.deleteUser(userId);
-      if (res.success) {
-        return { success: true };
-      }
-      return { success: false, error: res.error || 'Deletion failed' };
+      const res = await forwardToCentralServer('admin-delete-user', userId);
+      if (res && res.success) return res;
+      const localRes = db.deleteUser(userId);
+      return localRes;
     }
     return { success: false, error: 'Not authorized' };
   } catch (err) {
@@ -989,9 +993,11 @@ ipcMain.handle('admin-delete-user', (event, userId) => {
   }
 });
 
-ipcMain.handle('generate-license-key', (event, durationDays) => {
+ipcMain.handle('generate-license-key', async (event, durationDays) => {
   try {
     if (currentUser && currentUser.isAdmin) {
+      const res = await forwardToCentralServer('generate-license-key', durationDays || 'lifetime');
+      if (res && res.success) return res;
       const key = db.generateLicenseKey(durationDays || 'lifetime');
       return { success: true, key };
     }
@@ -1001,9 +1007,11 @@ ipcMain.handle('generate-license-key', (event, durationDays) => {
   }
 });
 
-ipcMain.handle('get-active-meetings', () => {
+ipcMain.handle('get-active-meetings', async () => {
   try {
     if (currentUser && currentUser.isAdmin) {
+      const res = await forwardToCentralServer('get-active-meetings');
+      if (res && res.success) return res;
       const meetings = db.getActiveMeetings();
       return { success: true, meetings };
     }
@@ -1013,9 +1021,11 @@ ipcMain.handle('get-active-meetings', () => {
   }
 });
 
-ipcMain.handle('get-system-settings', () => {
+ipcMain.handle('get-system-settings', async () => {
   try {
     if (currentUser && currentUser.isAdmin) {
+      const res = await forwardToCentralServer('get-system-settings');
+      if (res && res.success) return res;
       const settings = db.getSettings();
       return { success: true, settings };
     }
@@ -1025,11 +1035,13 @@ ipcMain.handle('get-system-settings', () => {
   }
 });
 
-ipcMain.handle('update-system-settings', (event, updates) => {
+ipcMain.handle('update-system-settings', async (event, updates) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = db.updateSettings(updates);
-      return res;
+      const res = await forwardToCentralServer('update-system-settings', updates);
+      if (res && res.success) return res;
+      const localRes = db.updateSettings(updates);
+      return localRes;
     }
     return { success: false, error: 'Not authorized' };
   } catch (err) {
@@ -1037,11 +1049,13 @@ ipcMain.handle('update-system-settings', (event, updates) => {
   }
 });
 
-ipcMain.handle('admin-toggle-ban', (event, { userId, isBanned }) => {
+ipcMain.handle('admin-toggle-ban', async (event, { userId, isBanned }) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = db.toggleUserBan(userId, isBanned);
-      return res;
+      const res = await forwardToCentralServer('admin-toggle-ban', { userId, isBanned });
+      if (res && res.success) return res;
+      const localRes = db.toggleUserBan(userId, isBanned);
+      return localRes;
     }
     return { success: false, error: 'Not authorized' };
   } catch (err) {
@@ -1049,11 +1063,13 @@ ipcMain.handle('admin-toggle-ban', (event, { userId, isBanned }) => {
   }
 });
 
-ipcMain.handle('admin-toggle-role', (event, { userId, isAdmin }) => {
+ipcMain.handle('admin-toggle-role', async (event, { userId, isAdmin }) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = db.toggleUserRole(userId, isAdmin);
-      return res;
+      const res = await forwardToCentralServer('admin-toggle-role', { userId, isAdmin });
+      if (res && res.success) return res;
+      const localRes = db.toggleUserRole(userId, isAdmin);
+      return localRes;
     }
     return { success: false, error: 'Not authorized' };
   } catch (err) {
