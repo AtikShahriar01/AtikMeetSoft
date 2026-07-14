@@ -458,3 +458,236 @@ body {
   20%, 60% { transform: translateX(-6px); }
   40%, 80% { transform: translateX(6px); }
 }
+
+/* ============================================================
+ *  GitHub Dark Theme overrides
+ * ============================================================ */
+body.theme-github {
+  background-color: #0d1117;
+  color: #c9d1d9;
+}
+
+body.theme-github .google-card {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+body.theme-github .google-title {
+  color: #f0f6fc;
+}
+
+body.theme-github .google-subtitle {
+  color: #8b949e;
+}
+
+body.theme-github .google-subtitle span {
+  color: #58a6ff;
+}
+
+body.theme-github .account-list {
+  background-color: #30363d;
+}
+
+body.theme-github .account-item {
+  background-color: #161b22;
+}
+
+body.theme-github .account-item:hover {
+  background-color: #21262d;
+}
+
+body.theme-github .account-item.separator {
+  border-top: 1px solid #30363d;
+}
+
+body.theme-github .account-name {
+  color: #c9d1d9;
+}
+
+body.theme-github .account-name.label-blue {
+  color: #58a6ff;
+}
+
+body.theme-github .account-email {
+  color: #8b949e;
+}
+
+body.theme-github .account-badge {
+  background-color: #30363d;
+  color: #c9d1d9;
+}
+
+body.theme-github .account-avatar.icon-avatar {
+  background-color: #30363d;
+  color: #8b949e;
+}
+
+body.theme-github .google-footer-text {
+  color: #8b949e;
+}
+
+body.theme-github .google-input-group input {
+  color: #f0f6fc;
+  border-color: #30363d;
+  background-color: #0d1117;
+}
+
+body.theme-github .google-input-group label {
+  background-color: #161b22;
+  color: #8b949e;
+}
+
+body.theme-github .google-input-group input:focus {
+  border-color: #2ea44f;
+}
+
+body.theme-github .google-input-group input:focus + label,
+body.theme-github .google-input-group input:not(:placeholder-shown) + label {
+  color: #2ea44f;
+}
+
+body.theme-github .btn-text {
+  color: #58a6ff;
+}
+
+body.theme-github .btn-text:hover {
+  background-color: rgba(88, 166, 255, 0.1);
+}
+
+body.theme-github .btn-contained {
+  background-color: #2ea44f;
+  color: #ffffff;
+}
+
+body.theme-github .btn-contained:hover {
+  background-color: #2c974b;
+}
+
+body.theme-github .success-checkmark .check-icon::before,
+body.theme-github .success-checkmark .check-icon::after {
+  background: #161b22;
+}
+
+/* ============================================================
+ *  Microsoft Dark Theme overrides
+ * ============================================================ */
+body.theme-microsoft {
+  background-color: #111111;
+  color: #ffffff;
+}
+
+body.theme-microsoft .google-card {
+  background-color: #202020;
+  border: 1px solid #333333;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  border-radius: 4px; /* Microsoft style: square corners */
+}
+
+body.theme-microsoft .google-title {
+  color: #ffffff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body.theme-microsoft .google-subtitle {
+  color: #cccccc;
+}
+
+body.theme-microsoft .google-subtitle span {
+  color: #00a4ef;
+}
+
+body.theme-microsoft .account-list {
+  background-color: #333333;
+  border-radius: 4px;
+}
+
+body.theme-microsoft .account-item {
+  background-color: #202020;
+  border-radius: 0;
+}
+
+body.theme-microsoft .account-item:hover {
+  background-color: #2d2d2d;
+}
+
+body.theme-microsoft .account-item.separator {
+  border-top: 1px solid #333333;
+}
+
+body.theme-microsoft .account-name {
+  color: #ffffff;
+}
+
+body.theme-microsoft .account-name.label-blue {
+  color: #00a4ef;
+}
+
+body.theme-microsoft .account-email {
+  color: #cccccc;
+}
+
+body.theme-microsoft .account-badge {
+  background-color: #333333;
+  color: #ffffff;
+  border-radius: 2px;
+}
+
+body.theme-microsoft .account-avatar {
+  border-radius: 4px; /* Square Microsoft style */
+}
+
+body.theme-microsoft .account-avatar.icon-avatar {
+  background-color: #333333;
+  color: #cccccc;
+}
+
+body.theme-microsoft .google-footer-text {
+  color: #cccccc;
+}
+
+body.theme-microsoft .google-input-group input {
+  color: #ffffff;
+  border-color: #8a8a8a;
+  background-color: transparent;
+  border-radius: 0px; /* Square inputs */
+}
+
+body.theme-microsoft .google-input-group label {
+  background-color: #202020;
+  color: #cccccc;
+}
+
+body.theme-microsoft .google-input-group input:focus {
+  border-color: #00a4ef;
+}
+
+body.theme-microsoft .google-input-group input:focus + label,
+body.theme-microsoft .google-input-group input:not(:placeholder-shown) + label {
+  color: #00a4ef;
+}
+
+body.theme-microsoft .btn-text {
+  color: #ffffff;
+  background-color: #333333;
+  border-radius: 0;
+}
+
+body.theme-microsoft .btn-text:hover {
+  background-color: #444444;
+}
+
+body.theme-microsoft .btn-contained {
+  background-color: #00a4ef;
+  color: #ffffff;
+  border-radius: 0;
+}
+
+body.theme-microsoft .btn-contained:hover {
+  background-color: #008cd2;
+}
+
+body.theme-microsoft .success-checkmark .check-icon::before,
+body.theme-microsoft .success-checkmark .check-icon::after {
+  background: #202020;
+}

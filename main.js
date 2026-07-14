@@ -609,79 +609,66 @@ ipcMain.handle('google-login-complete', async (event, data) => {
 
 ipcMain.handle('social-login', async (event, provider) => {
   console.log('[DEBUG] social-login handler called for provider:', provider);
-  if (provider === 'google') {
-    const googleResult = await new Promise((resolve) => {
-      googleAuthResolve = resolve;
-      
-      const winOptions = {
-        width: 450,
-        height: 600,
-        parent: mainWindow,
-        modal: true,
-        resizable: false,
-        minimizable: false,
-        maximizable: false,
-        show: false,
-        frame: true,
-        title: 'Sign in with Google',
-        webPreferences: {
-          preload: path.join(__dirname, 'preload.js'),
-          contextIsolation: true,
-          nodeIntegration: false
-        }
-      };
-      
-      googleWin = new BrowserWindow(winOptions);
-      googleWin.setMenu(null);
-      
-      googleWin.loadFile(path.join(__dirname, 'src', 'pages', 'google-login.html'));
-      
-      googleWin.once('ready-to-show', () => {
-        googleWin.show();
-      });
-      
-      googleWin.on('closed', () => {
-        googleWin = null;
-        if (googleAuthResolve) {
-          googleAuthResolve({ success: false, error: 'Sign in cancelled' });
-          googleAuthResolve = null;
-        }
-      });
-    });
-
-    if (!googleResult || !googleResult.email) {
-      return { success: false, error: googleResult ? googleResult.error : 'Google login cancelled' };
-    }
-
-    const { email, name } = googleResult;
+  
+  const socialResult = await new Promise((resolve) => {
+    googleAuthResolve = resolve;
     
-    if (isDeveloperPC) {
-      const res = await handleSocialLoginHelper('google', email, name);
-      if (res.success && res.user) {
-        currentUser = res.user;
+    const winOptions = {
+      width: 450,
+      height: 600,
+      parent: mainWindow,
+      modal: true,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      show: false,
+      frame: true,
+      title: `Sign in with ${provider.charAt(0).toUpperCase() + provider.slice(1)}`,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false
       }
-      return res;
-    } else {
-      const res = await forwardToCentralServer('social-login', { provider: 'google', email, name });
-      if (res.success && res.user) {
-        currentUser = res.user;
+    };
+    
+    googleWin = new BrowserWindow(winOptions);
+    googleWin.setMenu(null);
+    
+    googleWin.loadFile(path.join(__dirname, 'src', 'pages', 'google-login.html'), {
+      query: { provider }
+    });
+    
+    googleWin.once('ready-to-show', () => {
+      googleWin.show();
+    });
+    
+    googleWin.on('closed', () => {
+      googleWin = null;
+      if (googleAuthResolve) {
+        googleAuthResolve({ success: false, error: 'Sign in cancelled' });
+        googleAuthResolve = null;
       }
-      return res;
+    });
+  });
+
+  if (!socialResult || !socialResult.email) {
+    return { success: false, error: socialResult ? socialResult.error : `${provider} login cancelled` };
+  }
+
+  const { email, name } = socialResult;
+  
+  if (isDeveloperPC) {
+    const res = await handleSocialLoginHelper(provider, email, name);
+    if (res.success && res.user) {
+      currentUser = res.user;
     }
+    return res;
   } else {
-    if (isDeveloperPC) {
-      const res = await handleSocialLoginHelper(provider);
-      if (res.success && res.user) {
-        currentUser = res.user;
-      }
-      return res;
-    } else {
-      const res = await forwardToCentralServer('social-login', provider);
-      if (res.success && res.user) {
-        currentUser = res.user;
-      }
-      return res;
+    const res = await forwardToCentralServer('social-login', { provider, email, name });
+    if (res.success && res.user) {
+      currentUser = res.user;
     }
+    return res;
   }
 });
 
