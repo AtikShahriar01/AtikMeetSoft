@@ -1194,8 +1194,8 @@ function downloadFile(fileUrl, destPath, onProgress) {
 // ─── Auto-Update Handlers ───
 ipcMain.handle('check-for-updates', async () => {
   try {
-    const response = await fetch(`${CENTRAL_SERVER_URL}/version.json`);
-    if (!response.ok) throw new Error('Could not fetch version file from central server');
+    const response = await fetch('https://raw.githubusercontent.com/AtikShahriar01/AtikMeetSoft/main/package.json');
+    if (!response.ok) throw new Error('Could not fetch package.json from GitHub');
     const data = await response.json();
     
     const semverCompare = (v1, v2) => {
@@ -1209,7 +1209,7 @@ ipcMain.handle('check-for-updates', async () => {
     };
 
     if (data && data.version && semverCompare(data.version, APP_VERSION) > 0) {
-      const url = data.url || `https://github.com/AtikShahriar01/AtikMeetSoft/releases/download/v${data.version}/AtikMeet-${data.version} Setup.exe`;
+      const url = `https://github.com/AtikShahriar01/AtikMeetSoft/releases/download/v${data.version}/AtikMeet-${data.version} Setup.exe`;
       return { updateAvailable: true, version: data.version, url };
     }
     return { updateAvailable: false };
@@ -1224,12 +1224,13 @@ ipcMain.handle('start-update', async (event) => {
   if (isUpdating) return { success: false, error: 'Update already in progress' };
   
   try {
-    const checkRes = await fetch(`${CENTRAL_SERVER_URL}/version.json`);
-    if (!checkRes.ok) throw new Error('Failed to retrieve update URL');
+    const checkRes = await fetch('https://raw.githubusercontent.com/AtikShahriar01/AtikMeetSoft/main/package.json');
+    if (!checkRes.ok) throw new Error('Failed to retrieve update version from GitHub');
     const data = await checkRes.json();
     
-    let downloadUrl = data.url || (data.version ? `https://github.com/AtikShahriar01/AtikMeetSoft/releases/download/v${data.version}/AtikMeet-${data.version} Setup.exe` : null);
-    if (!downloadUrl) throw new Error('Update URL could not be determined');
+    if (!data || !data.version) throw new Error('Could not determine new version from GitHub package.json');
+    
+    const downloadUrl = `https://github.com/AtikShahriar01/AtikMeetSoft/releases/download/v${data.version}/AtikMeet-${data.version} Setup.exe`;
     
     isUpdating = true;
     const tempDir = app.getPath('temp');

@@ -1,0 +1,68 @@
+name: Auto Build and GitHub Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Extract App Version from package.json
+        id: get_version
+        shell: pwsh
+        run: |
+          $packageJson = Get-Content package.json -Raw | ConvertFrom-Json
+          $version = $packageJson.version
+          echo "APP_VERSION=$version" >> $env:GITHUB_ENV
+          Write-Host "App version detected: $version"
+
+      - name: Check if Release Already Exists
+        id: check_release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "v${{ env.APP_VERSION }}"
+          $releaseExists = gh release view $tag --repo ${{ github.repository }} 2>$null
+          if ($releaseExists) {
+            echo "RELEASE_EXISTS=true" >> $env:GITHUB_ENV
+            Write-Host "Release for tag $tag already exists. Skipping build and release."
+          } else {
+            echo "RELEASE_EXISTS=false" >> $env:GITHUB_ENV
+            Write-Host "No release found for tag $tag. Proceeding with build."
+          }
+
+      - name: Build Setup Installer (Electron Forge Make)
+        if: env.RELEASE_EXISTS == 'false'
+        run: npm run make
+
+      - name: Create GitHub Release and Upload Installer Asset
+        if: env.RELEASE_EXISTS == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.APP_VERSION }}
+          name: AtikMeet v${{ env.APP_VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            out/make/squirrel.windows/x64/AtikMeet-${{ env.APP_VERSION }} Setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
