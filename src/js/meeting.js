@@ -715,7 +715,11 @@ function renderJoinRequest(socketId, userName) {
   $('approval-popup').style.display = 'block';
 
   $('btn-admit-join').onclick = () => {
-    socket.emit('admit-participant', { targetId: socketId });
+    window.electronAPI.sendSignal(meetingId, {
+      type: 'admit-participant',
+      target: socketId,
+      sender: currentUser.email || 'guest'
+    });
     closeJoinRequestPopup();
   };
 
