@@ -58,6 +58,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initAuthListeners();
   setupExternalLinks();
+  
+  if (window.electronAPI && window.electronAPI.onSocialLoginSuccess) {
+    window.electronAPI.onSocialLoginSuccess(() => {
+      showSuccess('Account verified via web browser! Redirecting...');
+      setTimeout(() => {
+        window.electronAPI.navigate('home');
+      }, 800);
+    });
+  }
 });
 
 /**
@@ -78,6 +87,22 @@ function setupExternalLinks() {
 /**
  * Registers all event listeners for the authentication page
  */
+let captchaResult = 0;
+
+function generateCaptcha() {
+  const num1 = Math.floor(Math.random() * 9) + 1;
+  const num2 = Math.floor(Math.random() * 9) + 1;
+  captchaResult = num1 + num2;
+  const questionEl = $('captcha-question');
+  if (questionEl) {
+    questionEl.textContent = `${num1} + ${num2} = ?`;
+  }
+  const answerInput = $('captcha-answer');
+  if (answerInput) {
+    answerInput.value = '';
+  }
+}
+
 function initAuthListeners() {
   // Login form submission
   const loginForm = $('login-form');
@@ -85,27 +110,44 @@ function initAuthListeners() {
     loginForm.addEventListener('submit', handleLogin);
   }
 
-  // Signup form submission
-  const signupForm = $('signup-form');
-  if (signupForm) {
-    signupForm.addEventListener('submit', handleSignup);
-  }
-
-  // Trigger Google Login directly on Sign Up click
+  // Bind Show Sign Up Modal click
   const showSignupBtn = $('show-signup');
   if (showSignupBtn) {
     showSignupBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      handleSocialLogin('google');
+      const modal = $('signup-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        $('modal-signup-form').style.display = 'block';
+        $('modal-signup-success').style.display = 'none';
+        $('signup-firstname').value = '';
+        $('signup-lastname').value = '';
+        $('signup-email').value = '';
+        $('signup-password').value = '';
+        generateCaptcha();
+      }
     });
   }
 
-  const showLoginBtn = $('show-login');
-  if (showLoginBtn) {
-    showLoginBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      toggleForm('login');
+  // Bind Close Sign Up Modal click
+  const closeSignupModalBtn = $('close-signup-modal');
+  if (closeSignupModalBtn) {
+    closeSignupModalBtn.addEventListener('click', () => {
+      $('signup-modal').style.display = 'none';
     });
+  }
+
+  const btnModalSignupOk = $('btn-modal-signup-ok');
+  if (btnModalSignupOk) {
+    btnModalSignupOk.addEventListener('click', () => {
+      $('signup-modal').style.display = 'none';
+    });
+  }
+
+  // Modal Sign Up Form submission
+  const modalSignupForm = $('modal-signup-form');
+  if (modalSignupForm) {
+    modalSignupForm.addEventListener('submit', handleModalSignup);
   }
 
   // Password visibility toggles
@@ -210,76 +252,55 @@ async function handleLogin(e) {
 }
 
 /**
- * Handles the signup form submission
- * Validates inputs (including password match), calls electronAPI
+ * Handles the modal signup form submission
+ * Validates captcha, inputs, and invokes registration API
  * @param {Event} e - Form submit event
  */
-async function handleSignup(e) {
+async function handleModalSignup(e) {
   e.preventDefault();
 
   if (isSubmitting) return;
 
-  const name = $('signup-name')?.value?.trim();
+  const firstName = $('signup-firstname')?.value?.trim();
+  const lastName = $('signup-lastname')?.value?.trim();
   const email = $('signup-email')?.value?.trim();
   const password = $('signup-password')?.value;
-  const confirmPassword = $('signup-confirm-password')?.value;
+  const captchaAnswer = parseInt($('captcha-answer')?.value, 10);
 
-  // Validate name
-  if (!name || name.length < 2) {
-    showFieldError($('signup-name'), 'Name must be at least 2 characters.');
-    shakeElement($('signup-form'));
+  // Validate Captcha
+  if (captchaAnswer !== captchaResult) {
+    alert('Incorrect captcha answer. Please try again.');
+    generateCaptcha();
     return;
   }
 
-  // Validate email
-  if (!email) {
-    showFieldError($('signup-email'), 'Please enter your email address.');
-    shakeElement($('signup-form'));
-    return;
-  }
-
-  if (!isValidEmail(email)) {
-    showFieldError($('signup-email'), 'Please enter a valid email address.');
-    shakeElement($('signup-form'));
-    return;
-  }
-
-  // Validate password
+  // Validate password length
   if (!password || password.length < 6) {
-    showFieldError($('signup-password'), 'Password must be at least 6 characters.');
-    shakeElement($('signup-form'));
-    return;
-  }
-
-  // Validate password match
-  if (password !== confirmPassword) {
-    showFieldError($('signup-confirm-password'), 'Passwords do not match.');
-    shakeElement($('signup-form'));
+    alert('Password must be at least 6 characters.');
     return;
   }
 
   try {
     isSubmitting = true;
-    showLoading('signup-btn', 'Creating account...');
+    showLoading('modal-signup-submit-btn', 'Registering...');
 
-    const result = await window.electronAPI.register({ name, email, password });
+    const fullName = `${firstName} ${lastName}`;
+    const result = await window.electronAPI.register({ name: fullName, email, password });
 
     if (result.success) {
-      showSuccess('Account created! Redirecting...');
-      setTimeout(() => {
-        window.electronAPI.navigate('home');
-      }, 800);
+      $('modal-signup-form').style.display = 'none';
+      $('modal-signup-success').style.display = 'block';
     } else {
-      showError(result.error || 'Registration failed. Please try again.');
-      shakeElement($('signup-form'));
+      alert(result.error || 'Registration failed. Please try again.');
+      generateCaptcha();
     }
   } catch (error) {
-    console.error('[Auth] Signup error:', error);
-    showError('An unexpected error occurred. Please try again.');
-    shakeElement($('signup-form'));
+    console.error('[Auth] Modal signup error:', error);
+    alert('An unexpected error occurred. Please try again.');
+    generateCaptcha();
   } finally {
     isSubmitting = false;
-    hideLoading('signup-btn', 'Create Account');
+    hideLoading('modal-signup-submit-btn', 'Create Account & Verify');
   }
 }
 

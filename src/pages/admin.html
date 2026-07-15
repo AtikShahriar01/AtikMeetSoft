@@ -34,8 +34,12 @@
         <p>System Root Admin</p>
       </div>
       <nav class="sidebar-nav">
-        <a href="#" class="nav-item active">
+        <a href="#" class="nav-item active" id="tab-users">
           <span>Overview Users</span>
+        </a>
+        <a href="#" class="nav-item" id="tab-requests" style="position: relative;">
+          <span>Key Requests</span>
+          <span class="badge-pending" id="badge-requests-count" style="display: none; position: absolute; right: 15px; top: 12px; background: #ff4757; color: white; border-radius: 50%; font-size: 0.75rem; padding: 2px 6px;">0</span>
         </a>
       </nav>
       <div class="sidebar-footer">
@@ -138,7 +142,7 @@
       </div>
 
       <!-- User management database table -->
-      <section class="user-table-section">
+      <section class="user-table-section" id="users-section">
         <div class="section-header-row">
           <h2>Registered Users Database</h2>
           <input type="text" id="user-search-input" placeholder="Search by name, email or status...">
@@ -158,6 +162,30 @@
             <tbody id="user-table-body">
               <tr>
                 <td colspan="6" class="loading-users">Loading system users list...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Pending license key requests table -->
+      <section class="user-table-section pending-requests-section" id="requests-section" style="display: none;">
+        <div class="section-header-row">
+          <h2>Pending License Key Approvals</h2>
+        </div>
+        <div class="table-wrapper glass-card">
+          <table class="user-database-table">
+            <thead>
+              <tr>
+                <th>User Details</th>
+                <th>Requested Key</th>
+                <th>Access Duration Option</th>
+                <th>Control Actions</th>
+              </tr>
+            </thead>
+            <tbody id="requests-table-body">
+              <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 25px;">No pending license requests.</td>
               </tr>
             </tbody>
           </table>

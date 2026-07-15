@@ -90,21 +90,28 @@ async function checkTrialStatus() {
     const bannerText = $('license-banner-text');
     const upgradeBtn = $('banner-activate-btn');
 
-    if (status.isActivated) {
+    if (status.pendingKey) {
+      banner.style.display = 'flex';
+      banner.style.background = 'linear-gradient(90deg, rgba(245, 158, 11, 0.25), rgba(245, 158, 11, 0.15))';
+      bannerText.innerHTML = `⏳ <b>Activation Pending Approval:</b> Waiting for administrator to review and activate key: <b>${status.pendingKey}</b>`;
+      upgradeBtn.style.display = 'none';
+    } else if (status.isActivated) {
       banner.style.display = 'none'; // Premium active, hide banner
     } else if (status.isExpired) {
       banner.style.display = 'flex';
       banner.style.background = 'linear-gradient(90deg, rgba(255, 71, 87, 0.25), rgba(255, 71, 87, 0.15))';
       bannerText.innerHTML = `⚠️ <b>Trial Period Expired!</b> Your 7-day trial has ended. Please activate your license to continue using AtikMeet.`;
       upgradeBtn.textContent = 'Activate Key';
-      // Disable meeting creation if trial is expired
+      upgradeBtn.style.display = 'inline-block';
       $('btn-create-meeting').disabled = true;
       $('btn-create-meeting').title = "Please activate your license to start meetings";
       $('btn-join-meeting').disabled = true;
     } else {
       banner.style.display = 'flex';
+      banner.style.background = 'rgba(255, 255, 255, 0.04)';
       bannerText.innerHTML = `⏳ <b>Free Trial:</b> You have <b>${status.daysRemaining} days</b> left in your free trial. Activate to get permanent VIP features!`;
       upgradeBtn.textContent = 'Upgrade to VIP';
+      upgradeBtn.style.display = 'inline-block';
     }
   }
 }

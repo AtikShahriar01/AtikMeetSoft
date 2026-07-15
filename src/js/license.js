@@ -25,12 +25,17 @@ async function getLicenseStatus() {
     const wrapper = $('progress-wrapper');
     const bar = $('trial-progress');
 
-    if (result.isActivated) {
+    if (result.pendingKey) {
+      icon.textContent = '⏳';
+      text.innerHTML = `Activation Pending Approval<br><span style="font-size:0.8rem; font-weight:normal; color:#f59e0b;">Waiting for root administrator to activate key: <b>${result.pendingKey}</b></span>`;
+      wrapper.style.display = 'none';
+      $('status-box').style.borderColor = '#f59e0b';
+      $('license-form').style.display = 'none';
+    } else if (result.isActivated) {
       icon.textContent = '⭐';
       text.innerHTML = `Premium VIP Activated<br><span style="font-size:0.8rem; font-weight:normal; color:var(--text-secondary);">Unlimited lifetime meetings & E2EE security</span>`;
       wrapper.style.display = 'none';
       $('status-box').style.borderColor = 'var(--vip-gold)';
-      // Hide form since already activated
       $('license-form').style.display = 'none';
     } else if (result.isExpired) {
       icon.textContent = '❌';
@@ -43,7 +48,6 @@ async function getLicenseStatus() {
       text.innerHTML = `Free Trial Active (${result.daysRemaining} days left)`;
       wrapper.style.display = 'block';
       
-      // Calculate progress scale (max 7 days)
       const scaleVal = result.daysRemaining / 7;
       bar.style.transform = `scaleX(${scaleVal})`;
     }

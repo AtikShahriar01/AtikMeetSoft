@@ -18,6 +18,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   register: (data) => ipcRenderer.invoke('register', data),
   socialLogin: (provider) => ipcRenderer.invoke('social-login', provider),
   googleLoginComplete: (data) => ipcRenderer.invoke('google-login-complete', data),
+  onSocialLoginSuccess: (callback) => {
+    ipcRenderer.removeAllListeners('social-login-success');
+    ipcRenderer.on('social-login-success', () => callback());
+  },
   logout: () => ipcRenderer.invoke('logout'),
   getCurrentUser: () => ipcRenderer.invoke('get-current-user'),
   isLocalhost: () => ipcRenderer.invoke('is-localhost'),
@@ -48,6 +52,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearSignalListener: (roomId) => ipcRenderer.invoke('clear-signal-listener', roomId),
 
   // ─── Admin ───
+  getPendingActivations: () => ipcRenderer.invoke('get-pending-activations'),
+  approveLicenseActivation: (email, durationOption) => ipcRenderer.invoke('approve-license-activation', { email, durationOption }),
+  rejectLicenseActivation: (email) => ipcRenderer.invoke('reject-license-activation', email),
   getAdminStats: () => ipcRenderer.invoke('get-admin-stats'),
   getAllUsers: () => ipcRenderer.invoke('get-all-users'),
   adminActivateLicense: (userId, durationDays) => ipcRenderer.invoke('admin-activate-license', { userId, durationDays }),

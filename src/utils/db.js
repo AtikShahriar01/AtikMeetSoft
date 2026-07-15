@@ -6,6 +6,7 @@
  */
 
 const { initializeApp } = require('firebase/app');
+const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } = require('firebase/auth');
 const { 
   getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, 
   collection, getDocs, query, where, limit, orderBy 
@@ -25,6 +26,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const firestoreDb = getFirestore(app);
+const firebaseAuth = getAuth(app);
 
 const SALT_ROUNDS = 10;
 const LICENSE_PREFIX = 'ATIK';
@@ -86,6 +88,23 @@ async function createUser({ name, email, password, role = 'user' }) {
       return { success: false, error: 'User with this email already exists.' };
     }
 
+    // 1. Create Firebase Auth user
+    let userCredential;
+    try {
+      userCredential = await createUserWithEmailAndPassword(firebaseAuth, email.toLowerCase(), password);
+    } catch (authErr) {
+      console.error('[Firebase DB] Auth signup error:', authErr.message);
+      return { success: false, error: authErr.message };
+    }
+
+    // 2. Send email verification
+    try {
+      await sendEmailVerification(userCredential.user);
+    } catch (verErr) {
+      console.error('[Firebase DB] Verification email send error:', verErr.message);
+    }
+
+    // 3. Write record to Firestore
     const hashedPassword = bcrypt.hashSync(password, SALT_ROUNDS);
     const newUser = {
       id: email.toLowerCase(),
@@ -97,6 +116,7 @@ async function createUser({ name, email, password, role = 'user' }) {
       isVIP: role === 'admin' || false,
       licenseKey: null,
       licenseExpiry: null,
+      pendingKey: null,
       createdAt: new Date().toISOString(),
       isBanned: false
     };
@@ -112,6 +132,27 @@ async function createUser({ name, email, password, role = 'user' }) {
 async function loginUser(email, password) {
   try {
     if (!email || !password) return { success: false, error: 'Email and password are required.' };
+    
+    // 1. Authenticate with Firebase Auth
+    let userCredential;
+    try {
+      userCredential = await signInWithEmailAndPassword(firebaseAuth, email.toLowerCase(), password);
+    } catch (authErr) {
+      console.error('[Firebase DB] Auth login error:', authErr.message);
+      return { success: false, error: 'Invalid email or password.' };
+    }
+
+    const firebaseUser = userCredential.user;
+
+    // 2. Enforce email verification (bypass for admin)
+    if (email.toLowerCase() !== 'admin@atikmeet.com' && !firebaseUser.emailVerified) {
+      try {
+        await sendEmailVerification(firebaseUser);
+      } catch (e) {}
+      return { success: false, error: 'Your account is not verified yet. An activation link has been sent to your email.' };
+    }
+
+    // 3. Retrieve user document from Firestore
     const docRef = doc(firestoreDb, 'users', email.toLowerCase());
     const snapshot = await getDoc(docRef);
     if (!snapshot.exists()) {
@@ -121,11 +162,6 @@ async function loginUser(email, password) {
     const user = snapshot.data();
     if (user.isBanned) {
       return { success: false, error: 'Your account has been banned by the administrator.' };
-    }
-
-    const isMatch = bcrypt.compareSync(password, user.password);
-    if (!isMatch) {
-      return { success: false, error: 'Invalid email or password.' };
     }
 
     return { success: true, user: { ...user, password: undefined } };
@@ -384,6 +420,100 @@ async function deactivateLicense(email) {
   }
 }
 
+async function requestLicenseActivation(email, key) {
+  try {
+    if (!email || !key) return { success: false, error: 'Email and key are required.' };
+    const keyDocRef = doc(firestoreDb, 'licenseKeys', key.toUpperCase());
+    const keySnapshot = await getDoc(keyDocRef);
+    if (!keySnapshot.exists()) {
+      return { success: false, error: 'Invalid license key.' };
+    }
+
+    const license = keySnapshot.data();
+    if (license.isActive && !license.isShared) {
+      return { success: false, error: 'License key has already been used.' };
+    }
+
+    await updateUser(email, { pendingKey: key.toUpperCase() });
+    return { success: true, message: 'Activation request submitted to admin for approval.' };
+  } catch (error) {
+    console.error('[Firebase DB] requestLicenseActivation error:', error.message);
+    return { success: false, error: 'Failed to request license activation.' };
+  }
+}
+
+async function getPendingActivations() {
+  try {
+    const colRef = collection(firestoreDb, 'users');
+    const snapshot = await getDocs(colRef);
+    const list = [];
+    snapshot.forEach(docSnap => {
+      const u = docSnap.data();
+      if (u.pendingKey) {
+        list.push(u);
+      }
+    });
+    return list;
+  } catch (error) {
+    console.error('[Firebase DB] getPendingActivations error:', error.message);
+    return [];
+  }
+}
+
+async function approveLicenseActivation(email, durationDaysOption) {
+  try {
+    const user = await getUserById(email);
+    if (!user) return { success: false, error: 'User not found.' };
+    const key = user.pendingKey;
+    if (!key) return { success: false, error: 'No pending activation request for this user.' };
+
+    let expiryDate = null;
+    if (durationDaysOption !== 'lifetime') {
+      const days = parseInt(durationDaysOption) || 30;
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + days);
+      expiryDate = expiry.toISOString();
+    } else {
+      expiryDate = 'lifetime';
+    }
+
+    await updateUser(email, {
+      isVIP: true,
+      licenseKey: key,
+      licenseExpiry: expiryDate,
+      pendingKey: null
+    });
+
+    const keyDocRef = doc(firestoreDb, 'licenseKeys', key.toUpperCase());
+    const keySnapshot = await getDoc(keyDocRef);
+    if (keySnapshot.exists()) {
+      const license = keySnapshot.data();
+      if (!license.isShared) {
+        await updateDoc(keyDocRef, {
+          isActive: true,
+          assignedTo: email.toLowerCase(),
+          activatedAt: new Date().toISOString()
+        });
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase DB] approveLicenseActivation error:', error.message);
+    return { success: false, error: 'Failed to approve activation.' };
+  }
+}
+
+async function rejectLicenseActivation(email) {
+  try {
+    await updateUser(email, { pendingKey: null });
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase DB] rejectLicenseActivation error:', error.message);
+    return { success: false, error: 'Failed to reject activation.' };
+  }
+}
+
 async function getTrialDaysRemaining() {
   try {
     const settings = await getSettings();
@@ -607,6 +737,10 @@ module.exports = {
   generateLicenseKey,
   activateLicense,
   deactivateLicense,
+  requestLicenseActivation,
+  getPendingActivations,
+  approveLicenseActivation,
+  rejectLicenseActivation,
   getTrialDaysRemaining,
   isTrialExpired,
   setInstallDate,

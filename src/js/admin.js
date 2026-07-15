@@ -396,6 +396,23 @@ function setupEventListeners() {
     renderUserTable(filtered);
   });
 
+  // Tab switching
+  $('tab-users').addEventListener('click', (e) => {
+    e.preventDefault();
+    $('tab-users').classList.add('active');
+    $('tab-requests').classList.remove('active');
+    $('users-section').style.display = 'block';
+    $('requests-section').style.display = 'none';
+  });
+
+  $('tab-requests').addEventListener('click', (e) => {
+    e.preventDefault();
+    $('tab-requests').classList.add('active');
+    $('tab-users').classList.remove('active');
+    $('users-section').style.display = 'none';
+    $('requests-section').style.display = 'block';
+  });
+
   // Go to Client App (Home page)
   const btnDashboard = $('btn-dashboard');
   if (btnDashboard) {
@@ -405,10 +422,113 @@ function setupEventListeners() {
   }
 }
 
+// ── Pending activations key requests ─────────────────────────
+let pendingRequests = [];
+
+async function loadPendingActivations() {
+  const result = await window.electronAPI.getPendingActivations();
+  const tbody = $('requests-table-body');
+  const countBadge = $('badge-requests-count');
+
+  if (result.success && result.list) {
+    pendingRequests = result.list;
+    
+    if (pendingRequests.length > 0) {
+      countBadge.textContent = pendingRequests.length;
+      countBadge.style.display = 'inline-block';
+    } else {
+      countBadge.style.display = 'none';
+    }
+
+    renderRequestsTable(pendingRequests);
+  } else {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red; padding:20px;">Error loading requests.</td></tr>';
+  }
+}
+
+function renderRequestsTable(list) {
+  const tbody = $('requests-table-body');
+  tbody.innerHTML = '';
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 25px;">No pending license requests.</td></tr>';
+    return;
+  }
+
+  list.forEach(user => {
+    const row = document.createElement('tr');
+    const firstChar = user.name.charAt(0).toUpperCase();
+
+    row.innerHTML = `
+      <td>
+        <div class="user-cell-info">
+          <div class="user-avatar-circle">${firstChar}</div>
+          <div class="user-names">
+            <strong>${user.name}</strong>
+            <span>${user.email}</span>
+          </div>
+        </div>
+      </td>
+      <td><code style="color:var(--accent); font-weight:bold;">${user.pendingKey}</code></td>
+      <td>
+        <select class="admin-select duration-select" data-email="${user.email}" style="padding: 6px 12px; font-size: 0.9rem; border-radius: 6px; border: 1px solid var(--border); background: rgba(0,0,0,0.3); color:#fff; cursor:pointer;">
+          <option value="lifetime">Lifetime VIP</option>
+          <option value="30">30 Days VIP</option>
+          <option value="360">360 Days VIP</option>
+        </select>
+      </td>
+      <td>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-success btn-sm btn-approve" data-email="${user.email}" style="background: #22c55e; color:#fff; border:none; padding: 6px 12px; border-radius: 4px; cursor:pointer; font-weight:bold;">Approve Access</button>
+          <button class="btn btn-danger btn-sm btn-reject" data-email="${user.email}" style="background: #ef4444; color:#fff; border:none; padding: 6px 12px; border-radius: 4px; cursor:pointer; font-weight:bold;">Reject</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  // Hook Approve button
+  tbody.querySelectorAll('.btn-approve').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const email = btn.getAttribute('data-email');
+      const row = btn.closest('tr');
+      const select = row.querySelector('.duration-select');
+      const durationOption = select.value;
+
+      if (confirm(`Approve premium license request for ${email}?`)) {
+        const result = await window.electronAPI.approveLicenseActivation(email, durationOption);
+        if (result.success) {
+          alert('License approved successfully!');
+          await refreshDashboard();
+        } else {
+          alert('Error approving license: ' + result.error);
+        }
+      }
+    });
+  });
+
+  // Hook Reject button
+  tbody.querySelectorAll('.btn-reject').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const email = btn.getAttribute('data-email');
+      if (confirm(`Reject pending license request for ${email}?`)) {
+        const result = await window.electronAPI.rejectLicenseActivation(email);
+        if (result.success) {
+          alert('Request rejected.');
+          await refreshDashboard();
+        } else {
+          alert('Error rejecting request: ' + result.error);
+        }
+      }
+    });
+  });
+}
+
 // ── Refresh Dashboard contents ────────────────────────────────
 async function refreshDashboard() {
   await loadAdminStats();
   await loadUsersList();
+  await loadPendingActivations();
   await loadActiveMeetings();
 }
 

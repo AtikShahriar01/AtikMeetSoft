@@ -331,27 +331,30 @@
       const tickEl = document.getElementById('success-tick');
       const spinnerEl = document.querySelector('.google-spinner');
 
-      // Customize verification messages based on provider
-      const providerCapitalized = provider.charAt(0).toUpperCase() + provider.slice(1);
-      titleEl.textContent = 'Account Verified';
-      subtitleEl.textContent = `Linking your profile with AtikMeet`;
+      titleEl.textContent = 'Verifying Account...';
+      subtitleEl.textContent = `Connecting securely to ${provider.toUpperCase()} Accounts`;
 
-      setTimeout(() => {
-        spinnerEl.style.display = 'none';
-        tickEl.style.display = 'block';
-
-        setTimeout(async () => {
-          if (window.electronAPI && window.electronAPI.googleLoginComplete) {
-            await window.electronAPI.googleLoginComplete({
-              name: selectedName,
-              email: selectedEmail
-            });
+      setTimeout(async () => {
+        try {
+          const url = `/api/social-login-complete?provider=${provider}&email=${encodeURIComponent(selectedEmail)}&name=${encodeURIComponent(selectedName)}`;
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          spinnerEl.style.display = 'none';
+          if (data.success) {
+            tickEl.style.display = 'block';
+            titleEl.textContent = 'Account Verified!';
+            subtitleEl.innerHTML = `<span style="color:#00d4aa; font-weight:bold;">Successfully logged in as: ${selectedName}</span><br>Please return to the AtikMeet application window. You can close this browser tab.`;
           } else {
-            console.warn('Electron API unavailable, simulating login return locally.');
-            alert(`Verified: ${selectedName} (${selectedEmail})`);
+            titleEl.textContent = 'Login Failed';
+            subtitleEl.textContent = data.error || 'Authentication rejected.';
           }
-        }, 1200);
-      }, 2000);
+        } catch (err) {
+          spinnerEl.style.display = 'none';
+          titleEl.textContent = 'Connection Error';
+          subtitleEl.textContent = 'Could not establish connection with AtikMeet desktop application.';
+        }
+      }, 1500);
     }
   </script>
 </body>

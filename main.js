@@ -110,6 +110,27 @@ function initSignalingServer() {
       // URL decoding to prevent double decoding issues
       pathname = decodeURIComponent(pathname);
 
+      // Handle social login callback from external browser
+      if (pathname === '/api/social-login-complete') {
+        const provider = parsedUrl.query.provider;
+        const email = parsedUrl.query.email;
+        const name = parsedUrl.query.name;
+
+        console.log('[DEBUG] Server social-login-complete callback:', { provider, email, name });
+
+        const resObj = await handleSocialLoginHelper(provider, email, name);
+        if (resObj.success && resObj.user) {
+          currentUser = resObj.user;
+          if (mainWindow) {
+            mainWindow.webContents.send('social-login-success');
+          }
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(resObj));
+        return;
+      }
+
       // Handle remote IPC proxy gateway requests
       if (pathname === '/api/ipc' && req.method === 'POST') {
         let body = '';
@@ -427,22 +448,24 @@ async function getTrialStatusHelper(userId) {
     let isActivated = false;
     let isVIP = false;
     let isBanned = false;
+    let pendingKey = null;
     
     if (userId) {
       const user = await db.getUserById(userId);
       if (user) {
         // Dynamic license expiry check
-        if (user.licenseActivated && user.licenseExpiresAt) {
-          const expiry = new Date(user.licenseExpiresAt);
+        if (user.licenseKey && user.licenseExpiry && user.licenseExpiry !== 'lifetime') {
+          const expiry = new Date(user.licenseExpiry);
           if (expiry < new Date()) {
             await db.deactivateLicense(userId);
           }
         }
         
         const freshUser = await db.getUserById(userId);
-        isActivated = freshUser.licenseActivated;
+        isActivated = !!freshUser.licenseKey || freshUser.isVIP;
         isVIP = freshUser.isVIP;
         isBanned = !!freshUser.isBanned;
+        pendingKey = freshUser.pendingKey || null;
       }
     }
     
@@ -456,7 +479,8 @@ async function getTrialStatusHelper(userId) {
       isActivated,
       isVIP,
       isBanned,
-      isMaintenance
+      isMaintenance,
+      pendingKey
     };
   } catch (err) {
     return { success: false, error: err.message };
@@ -593,67 +617,9 @@ ipcMain.handle('google-login-complete', async (event, data) => {
 
 ipcMain.handle('social-login', async (event, provider) => {
   console.log('[DEBUG] social-login handler called for provider:', provider);
-  
-  const socialResult = await new Promise((resolve) => {
-    googleAuthResolve = resolve;
-    
-    const winOptions = {
-      width: 450,
-      height: 600,
-      parent: mainWindow,
-      modal: true,
-      resizable: false,
-      minimizable: false,
-      maximizable: false,
-      show: false,
-      frame: true,
-      title: `Sign in with ${provider.charAt(0).toUpperCase() + provider.slice(1)}`,
-      webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
-        contextIsolation: true,
-        nodeIntegration: false
-      }
-    };
-    
-    googleWin = new BrowserWindow(winOptions);
-    googleWin.setMenu(null);
-    
-    googleWin.loadFile(path.join(__dirname, 'src', 'pages', 'google-login.html'), {
-      query: { provider }
-    });
-    
-    googleWin.once('ready-to-show', () => {
-      googleWin.show();
-    });
-    
-    googleWin.on('closed', () => {
-      googleWin = null;
-      if (googleAuthResolve) {
-        googleAuthResolve({ success: false, error: 'Sign in cancelled' });
-        googleAuthResolve = null;
-      }
-    });
-  });
-
-  if (!socialResult || !socialResult.email) {
-    return { success: false, error: socialResult ? socialResult.error : `${provider} login cancelled` };
-  }
-
-  const { email, name } = socialResult;
-  
-  if (isDeveloperPC) {
-    const res = await handleSocialLoginHelper(provider, email, name);
-    if (res.success && res.user) {
-      currentUser = res.user;
-    }
-    return res;
-  } else {
-    const res = await forwardToCentralServer('social-login', { provider, email, name });
-    if (res.success && res.user) {
-      currentUser = res.user;
-    }
-    return res;
-  }
+  const targetUrl = `http://localhost:${SIGNALING_PORT}/pages/google-login.html?provider=${provider}`;
+  shell.openExternal(targetUrl);
+  return { success: true };
 });
 
 ipcMain.handle('logout', async () => {
@@ -664,9 +630,16 @@ ipcMain.handle('logout', async () => {
   return { success: true };
 });
 
-ipcMain.handle('get-current-user', () => {
-  console.log('[DEBUG] getCurrentUser called. currentUser is:', currentUser ? `${currentUser.name} (${currentUser.email}), isAdmin=${currentUser.isAdmin}` : 'null');
+ipcMain.handle('get-current-user', async () => {
   if (currentUser) {
+    try {
+      const freshUser = await db.getUserById(currentUser.id);
+      if (freshUser) {
+        currentUser = freshUser;
+      }
+    } catch (e) {
+      console.warn('Failed to refresh current user from DB:', e.message);
+    }
     return { success: true, user: currentUser };
   }
   return { success: false, error: 'Not logged in' };
@@ -757,14 +730,46 @@ ipcMain.handle('get-trial-status', async () => {
 ipcMain.handle('activate-license', async (event, key) => {
   try {
     if (currentUser) {
-      const result = await db.activateLicense(currentUser.id, key);
-      if (result.success) {
-        currentUser = await db.getUserById(currentUser.id);
-        return { success: true, message: 'License activated successfully!' };
-      }
-      return { success: false, error: result.error || 'Invalid license key' };
+      const result = await db.requestLicenseActivation(currentUser.id, key);
+      return result;
     }
     return { success: false, error: 'Not logged in' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('get-pending-activations', async () => {
+  try {
+    if (currentUser && currentUser.isAdmin) {
+      const list = await db.getPendingActivations();
+      return { success: true, list };
+    }
+    return { success: false, error: 'Not authorized' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('approve-license-activation', async (event, { email, durationOption }) => {
+  try {
+    if (currentUser && currentUser.isAdmin) {
+      const result = await db.approveLicenseActivation(email, durationOption);
+      return result;
+    }
+    return { success: false, error: 'Not authorized' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('reject-license-activation', async (event, email) => {
+  try {
+    if (currentUser && currentUser.isAdmin) {
+      const result = await db.rejectLicenseActivation(email);
+      return result;
+    }
+    return { success: false, error: 'Not authorized' };
   } catch (err) {
     return { success: false, error: err.message };
   }
