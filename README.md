@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/AtikShahriar01/AtikMeetSoft/releases/latest">
-    <img src="https://img.shields.io/badge/Release-v1.0.1-blue.svg?style=for-the-badge" alt="Latest Release">
+    <img src="https://img.shields.io/badge/Release-v1.0.2-blue.svg?style=for-the-badge" alt="Latest Release">
   </a>
   <a href="https://nodejs.org/">
     <img src="https://img.shields.io/badge/Node.js-v18%2B-green.svg?style=for-the-badge&logo=node.js" alt="Node Version">
@@ -134,7 +134,7 @@ AtikMeet utilizes cutting-edge multimedia standards to achieve low data consumpt
 *   **Video Codecs:** Support for **VP8** and **H.264** with dynamic bitrate adjustment based on connection bandwidth.
 *   **Audio Codecs:** Built-in **Opus** codec configuration for full-duplex spatial audio (crystal clear audio with echo cancellation).
 *   **Encryption Protocol:** Secure media streaming using **SRTP (Secure Real-time Transport Protocol)** over DTLS.
-*   **Signaling Channel:** Secure JSON WebSockets via **Socket.io** over HTTPS.
+*   **Signaling Channel:** Serverless WebRTC signaling via **Google Firebase Cloud Firestore**.
 
 ---
 
@@ -146,7 +146,7 @@ AtikMeet utilizes cutting-edge multimedia standards to achieve low data consumpt
 | **Data Privacy** | **P2P (100% Private)** | Hosted on Google Servers | Hosted on Zoom Servers |
 | **Lobby & Waiting Room** | **Included** | Included | Included |
 | **Max Participants** | **Up to 150** | 100 (Free) | 100 (Free) |
-| **Self-Hosting Server** | **Yes (Socket.io)** | No | No |
+| **Server Requirement** | **Serverless (Firebase)** | Cloud Hosted | Cloud Hosted |
 | **Custom License Control** | **Yes (Admin Key Gen)** | No | No |
 
 ---
@@ -168,7 +168,7 @@ npm run desktop
 ```
 
 ### 3. Packaging & Distribution Installer
-To compile your own distributable wizard setup (`AtikMeet-[version]-Wizard-Setup.exe`):
+To compile your own distributable wizard setup (`AtikMeet-[version] Setup.exe`):
 ```bash
 npm run make
 ```
@@ -187,13 +187,14 @@ To access the administrator tools, log in using the admin account on your host P
 
 ---
 
-## 💾 Standalone Server Setup
+## 💾 Firebase Cloud Configuration
 
-To run a remote signaling node, you can run the background server process silently:
+AtikMeet v1.0.2 is serverless and communicates directly with your Google Firebase Cloud Firestore and Authentication services:
 
-1. Right-click on `setup-autostart.bat` and select **"Run as Administrator"**.
-2. The script will automatically configure inbound Windows Defender Firewall rules for TCP and UDP port `3478`.
-3. It registers `start-server-silent.vbs` to your Windows startup registry, allowing the signaling server to run silently on boot.
+1. Create a Firebase project at the [Firebase Console](https://console.firebase.google.com/).
+2. Enable **Firestore Database** and **Email/Password Authentication**.
+3. Configure your API config variables in `src/js/firebase-init.js`.
+4. Run the desktop app. The system settings and database seeding will be automatically initialized in your Firestore collections on first launch.
 
 ---
 
