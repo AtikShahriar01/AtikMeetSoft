@@ -39,6 +39,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   endMeeting: (meetingId) => ipcRenderer.invoke('end-meeting', meetingId),
   deleteMeeting: (meetingId) => ipcRenderer.invoke('delete-meeting', meetingId),
   getMeetingInfo: (meetingId) => ipcRenderer.invoke('get-meeting-info', meetingId),
+  sendSignal: (roomId, packet) => ipcRenderer.invoke('send-signal', { roomId, packet }),
+  listenSignals: (roomId) => ipcRenderer.send('listen-signals', roomId),
+  onSignalReceived: (callback) => {
+    ipcRenderer.removeAllListeners('signal-received');
+    ipcRenderer.on('signal-received', (event, data) => callback(data));
+  },
+  clearSignalListener: (roomId) => ipcRenderer.invoke('clear-signal-listener', roomId),
 
   // ─── Admin ───
   getAdminStats: () => ipcRenderer.invoke('get-admin-stats'),

@@ -105,7 +105,7 @@ function initSignalingServer() {
   try {
     const { startSignalingServer } = require('./src/utils/signaling');
     
-    const server = http.createServer((req, res) => {
+    const server = http.createServer(async (req, res) => {
       const parsedUrl = url.parse(req.url, true);
       let pathname = parsedUrl.pathname;
 
@@ -123,11 +123,11 @@ function initSignalingServer() {
 
             if (channel === 'login') {
               const { email, password } = args[0] || {};
-              result = db.loginUser(email, password);
+              result = await db.loginUser(email, password);
             } 
             else if (channel === 'register') {
               const { name, email, password } = args[0] || {};
-              result = db.createUser({ name, email, password });
+              result = await db.createUser({ name, email, password });
             }
             else if (channel === 'social-login') {
               const data = args[0];
@@ -142,12 +142,12 @@ function initSignalingServer() {
             }
             else if (channel === 'get-trial-status') {
               const userId = args[0];
-              result = getTrialStatusHelper(userId);
+              result = await getTrialStatusHelper(userId);
             }
             else if (channel === 'create-meeting') {
               const { hostId, hostName } = args[0] || {};
               const meetingId = helpers.generateMeetingId();
-              const createRes = db.createMeeting({ id: meetingId, hostId, hostName });
+              const createRes = await db.createMeeting({ id: meetingId, hostId, hostName });
               if (createRes.success && createRes.meeting) {
                 const meetingLink = `${CENTRAL_SERVER_URL}/meeting/${meetingId}`;
                 result = { success: true, meeting: createRes.meeting, meetingLink, meetingId };
@@ -165,32 +165,32 @@ function initSignalingServer() {
             }
             else if (channel === 'get-recent-meetings') {
               const userId = args[0];
-              const meetings = db.getUserMeetings(userId);
+              const meetings = await db.getUserMeetings(userId);
               result = { success: true, meetings };
             }
             else if (channel === 'end-meeting') {
               const meetingId = args[0];
-              db.endMeeting(meetingId);
+              await db.endMeeting(meetingId);
               result = { success: true };
             }
             else if (channel === 'delete-meeting') {
               const meetingId = args[0];
-              result = db.deleteMeeting(meetingId);
+              result = await db.deleteMeeting(meetingId);
             }
             else if (channel === 'get-meeting-info') {
               const meetingId = args[0];
-              const meeting = db.getMeeting(meetingId);
+              const meeting = await db.getMeeting(meetingId);
               result = { success: true, meeting };
             }
             else if (channel === 'update-profile') {
               const { userId, data } = args[0] || {};
-              db.updateUser(userId, data);
-              const fresh = db.getUserById(userId);
+              await db.updateUser(userId, data);
+              const fresh = await db.getUserById(userId);
               result = { success: true, user: fresh };
             }
             else if (channel === 'activate-license') {
               const { userId, key } = args[0] || {};
-              const actRes = db.activateLicense(userId, key);
+              const actRes = await db.activateLicense(userId, key);
               result = actRes;
             }
             else if (channel === 'get-signaling-info') {
@@ -217,7 +217,7 @@ function initSignalingServer() {
         const isLocalConnection = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.includes('::ffff:127.0.0.1') || clientIp.includes('localhost');
         
         if (isLocalConnection && db) {
-          const admin = db.getAllUsers().find(u => u.isAdmin);
+          const admin = (await db.getAllUsers()).find(u => u.isAdmin);
           if (admin) {
             currentUser = admin;
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -320,7 +320,7 @@ function detectLocalhost() {
 }
 
 // ─── App Ready ───
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   detectLocalhost();
 
   if (isDeveloperPC) {
@@ -360,15 +360,15 @@ app.whenReady().then(() => {
   // If localhost (admin), auto-create admin account
   if (isLocalhost && db) {
     try {
-      const adminExists = db.getAllUsers().find(u => u.isAdmin);
+      const adminExists = (await db.getAllUsers()).find(u => u.isAdmin);
       if (!adminExists) {
-        const result = db.createUser({ 
+        const result = await db.createUser({ 
           name: 'Atik Shahriar', 
           email: 'admin@atikmeet.com', 
           password: 'atikadmin2026' 
         });
         if (result.success && result.user) {
-          db.updateUser(result.user.id, { 
+          await db.updateUser(result.user.email, { 
             isAdmin: true, 
             isVIP: true, 
             licenseActivated: true,
@@ -379,7 +379,7 @@ app.whenReady().then(() => {
       } else {
         // Ensure existing admin has license key assigned and VIP status
         if (!adminExists.licenseKey || !adminExists.isVIP) {
-          db.updateUser(adminExists.id, {
+          await db.updateUser(adminExists.email, {
             licenseKey: 'ATIK-ADMIN-VIP-2026',
             licenseActivated: true,
             isVIP: true
@@ -422,35 +422,35 @@ async function forwardToCentralServer(channel, arg) {
   }
 }
 
-function getTrialStatusHelper(userId) {
+async function getTrialStatusHelper(userId) {
   try {
-    const daysRemaining = db.getTrialDaysRemaining();
-    const isExpired = db.isTrialExpired();
+    const daysRemaining = await db.getTrialDaysRemaining();
+    const isExpired = await db.isTrialExpired();
     
     let isActivated = false;
     let isVIP = false;
     let isBanned = false;
     
     if (userId) {
-      const user = db.getUserById(userId);
+      const user = await db.getUserById(userId);
       if (user) {
         // Dynamic license expiry check
         if (user.licenseActivated && user.licenseExpiresAt) {
           const expiry = new Date(user.licenseExpiresAt);
           if (expiry < new Date()) {
-            db.deactivateLicense(userId);
+            await db.deactivateLicense(userId);
           }
         }
         
-        const freshUser = db.getUserById(userId);
+        const freshUser = await db.getUserById(userId);
         isActivated = freshUser.licenseActivated;
         isVIP = freshUser.isVIP;
         isBanned = !!freshUser.isBanned;
       }
     }
     
-    const settings = db.getSettings();
-    const isMaintenance = (settings && settings.maintenanceMode && userId && !db.getUserById(userId)?.isAdmin);
+    const settings = await db.getSettings();
+    const isMaintenance = (settings && settings.maintenanceMode && userId && !(await db.getUserById(userId))?.isAdmin);
     
     return {
       success: true,
@@ -473,28 +473,28 @@ async function handleSocialLoginHelper(provider, email, name) {
     const targetEmail = email || `atik.${provider}@atikmeet.com`;
     const targetName = name || `Atik ${providerUpper}`;
     
-    let user = db.db.get('users').find({ email: targetEmail }).value();
+    let user = await db.getUserById(targetEmail);
     if (!user) {
-      const result = db.createUser({
+      const result = await db.createUser({
         name: targetName,
         email: targetEmail,
         password: 'sociallogin123'
       });
       if (result.success && result.user) {
-        user = db.db.get('users').find({ email: targetEmail }).value();
+        user = await db.getUserById(targetEmail);
       } else {
         return { success: false, error: result.error || 'Failed to create social account' };
       }
     } else if (name && user.name !== name) {
-      db.updateUser(user.id, { name });
-      user = db.db.get('users').find({ email: targetEmail }).value();
+      await db.updateUser(user.email || user.id, { name });
+      user = await db.getUserById(targetEmail);
     }
     
     if (user.isBanned) {
       return { success: false, error: 'Your account has been banned by the administrator.' };
     }
 
-    const settings = db.getSettings();
+    const settings = await db.getSettings();
     if (settings && settings.maintenanceMode && !user.isAdmin) {
       return { success: false, error: 'The system is currently under maintenance. Please try again later.' };
     }
@@ -553,46 +553,29 @@ ipcMain.handle('navigate', (event, page) => {
   }
 });
 
-// ─── Authentication ───
 ipcMain.handle('login', async (event, { email, password }) => {
-  if (isDeveloperPC) {
-    try {
-      const loginResult = db.loginUser(email, password);
-      if (loginResult && loginResult.success) {
-        currentUser = loginResult.user;
-        return { success: true, user: loginResult.user };
-      }
-      return { success: false, error: loginResult ? loginResult.error : 'Invalid email or password' };
-    } catch (err) {
-      return { success: false, error: err.message };
+  try {
+    const loginResult = await db.loginUser(email, password);
+    if (loginResult && loginResult.success) {
+      currentUser = loginResult.user;
+      return { success: true, user: loginResult.user };
     }
-  } else {
-    const res = await forwardToCentralServer('login', { email, password });
-    if (res.success && res.user) {
-      currentUser = res.user.user || res.user;
-    }
-    return res;
+    return { success: false, error: loginResult ? loginResult.error : 'Invalid email or password' };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 
 ipcMain.handle('register', async (event, { name, email, password }) => {
-  if (isDeveloperPC) {
-    try {
-      const result = db.createUser({ name, email, password });
-      if (result.success && result.user) {
-        currentUser = result.user;
-        return { success: true, user: result.user };
-      }
-      return { success: false, error: result.error || 'Registration failed' };
-    } catch (err) {
-      return { success: false, error: err.message };
+  try {
+    const result = await db.createUser({ name, email, password });
+    if (result.success && result.user) {
+      currentUser = result.user;
+      return { success: true, user: result.user };
     }
-  } else {
-    const res = await forwardToCentralServer('register', { name, email, password });
-    if (res.success && res.user) {
-      currentUser = res.user;
-    }
-    return res;
+    return { success: false, error: result.error || 'Registration failed' };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 
@@ -736,26 +719,15 @@ ipcMain.handle('auto-login-admin', async () => {
 
 // ─── Profile ───
 ipcMain.handle('update-profile', async (event, data) => {
-  if (isDeveloperPC) {
-    try {
-      if (currentUser) {
-        db.updateUser(currentUser.id, data);
-        currentUser = db.getUserById(currentUser.id);
-        return { success: true, user: { ...currentUser, password: undefined } };
-      }
-      return { success: false, error: 'Not logged in' };
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  } else {
+  try {
     if (currentUser) {
-      const res = await forwardToCentralServer('update-profile', { userId: currentUser.id, data });
-      if (res.success && res.user) {
-        currentUser = res.user;
-      }
-      return res;
+      await db.updateUser(currentUser.email || currentUser.id, data);
+      currentUser = await db.getUserById(currentUser.email || currentUser.id);
+      return { success: true, user: { ...currentUser, password: undefined } };
     }
     return { success: false, error: 'Not logged in' };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 
@@ -792,135 +764,95 @@ ipcMain.handle('get-avatar', async () => {
 
 // ─── License ───
 ipcMain.handle('get-trial-status', async () => {
-  if (isDeveloperPC) {
-    return getTrialStatusHelper(currentUser ? currentUser.id : null);
-  } else {
-    const userId = currentUser ? currentUser.id : null;
-    return await forwardToCentralServer('get-trial-status', userId);
-  }
+  return await getTrialStatusHelper(currentUser ? currentUser.id : null);
 });
 
 ipcMain.handle('activate-license', async (event, key) => {
-  if (isDeveloperPC) {
-    try {
-      if (currentUser) {
-        const result = db.activateLicense(currentUser.id, key);
-        if (result.success) {
-          currentUser = db.getUserById(currentUser.id);
-          return { success: true, message: 'License activated successfully!' };
-        }
-        return { success: false, error: result.error || 'Invalid license key' };
-      }
-      return { success: false, error: 'Not logged in' };
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  } else {
+  try {
     if (currentUser) {
-      return await forwardToCentralServer('activate-license', { userId: currentUser.id, key });
+      const result = await db.activateLicense(currentUser.id, key);
+      if (result.success) {
+        currentUser = await db.getUserById(currentUser.id);
+        return { success: true, message: 'License activated successfully!' };
+      }
+      return { success: false, error: result.error || 'Invalid license key' };
     }
     return { success: false, error: 'Not logged in' };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 
 // ─── Meetings ───
 ipcMain.handle('create-meeting', async () => {
-  if (isDeveloperPC) {
-    try {
-      if (currentUser) {
-        const meetingId = helpers.generateMeetingId();
-        const result = db.createMeeting({
-          id: meetingId,
-          hostId: currentUser.id,
-          hostName: currentUser.name
-        });
-        if (result.success && result.meeting) {
-          const localIP = getLocalIP();
-          const meetingLink = `http://${localIP}:${SIGNALING_PORT}/meeting/${meetingId}`;
-          return { success: true, meeting: result.meeting, meetingLink, meetingId };
-        }
-        return { success: false, error: result.error || 'Failed to create meeting' };
-      }
-      return { success: false, error: 'Not logged in' };
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  } else {
+  try {
     if (currentUser) {
-      return await forwardToCentralServer('create-meeting', { hostId: currentUser.id, hostName: currentUser.name });
+      const meetingId = helpers.generateMeetingId();
+      const result = await db.createMeeting({
+        id: meetingId,
+        hostId: currentUser.id,
+        hostName: currentUser.name
+      });
+      if (result.success && result.meeting) {
+        const localIP = getLocalIP();
+        const meetingLink = `http://${localIP}:${SIGNALING_PORT}/meeting/${meetingId}`;
+        return { success: true, meeting: result.meeting, meetingLink, meetingId };
+      }
+      return { success: false, error: result.error || 'Failed to create meeting' };
     }
     return { success: false, error: 'Not logged in' };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 
 ipcMain.handle('join-meeting', async (event, meetingId) => {
-  if (isDeveloperPC) {
-    try {
-      let id = meetingId;
-      if (meetingId.includes('/meeting/')) {
-        id = meetingId.split('/meeting/').pop();
-      }
-      return { success: true, meetingId: id };
-    } catch (err) {
-      return { success: false, error: err.message };
+  try {
+    let id = meetingId;
+    if (meetingId.includes('/meeting/')) {
+      id = meetingId.split('/meeting/').pop();
     }
-  } else {
-    return await forwardToCentralServer('join-meeting', meetingId);
+    return { success: true, meetingId: id };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 
 ipcMain.handle('get-recent-meetings', async () => {
-  if (isDeveloperPC) {
-    try {
-      if (currentUser) {
-        const meetings = db.getUserMeetings(currentUser.id);
-        return { success: true, meetings };
-      }
-      return { success: true, meetings: [] };
-    } catch (err) {
-      return { success: false, error: err.message };
+  try {
+    if (currentUser) {
+      const meetings = await db.getUserMeetings(currentUser.id);
+      return { success: true, meetings };
     }
-  } else {
-    const userId = currentUser ? currentUser.id : null;
-    return await forwardToCentralServer('get-recent-meetings', userId);
+    return { success: true, meetings: [] };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 
 ipcMain.handle('end-meeting', async (event, meetingId) => {
-  if (isDeveloperPC) {
-    try {
-      db.endMeeting(meetingId);
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  } else {
-    return await forwardToCentralServer('end-meeting', meetingId);
+  try {
+    await db.endMeeting(meetingId);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 
 ipcMain.handle('delete-meeting', async (event, meetingId) => {
-  if (isDeveloperPC) {
-    try {
-      return db.deleteMeeting(meetingId);
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  } else {
-    return await forwardToCentralServer('delete-meeting', meetingId);
+  try {
+    return await db.deleteMeeting(meetingId);
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 
 ipcMain.handle('get-meeting-info', async (event, meetingId) => {
-  if (isDeveloperPC) {
-    try {
-      const meeting = db.getMeeting(meetingId);
-      return { success: true, meeting };
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  } else {
-    return await forwardToCentralServer('get-meeting-info', meetingId);
+  try {
+    const meeting = await db.getMeeting(meetingId);
+    return { success: true, meeting };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 
@@ -928,9 +860,7 @@ ipcMain.handle('get-meeting-info', async (event, meetingId) => {
 ipcMain.handle('get-admin-stats', async () => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = await forwardToCentralServer('get-admin-stats');
-      if (res && res.success) return res;
-      const stats = db.getStats();
+      const stats = await db.getStats();
       return { success: true, stats };
     }
     return { success: false, error: 'Not authorized' };
@@ -942,9 +872,7 @@ ipcMain.handle('get-admin-stats', async () => {
 ipcMain.handle('get-all-users', async () => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = await forwardToCentralServer('get-all-users');
-      if (res && res.success) return res;
-      const users = db.getAllUsers();
+      const users = await db.getAllUsers();
       return { success: true, users };
     }
     return { success: false, error: 'Not authorized' };
@@ -956,10 +884,8 @@ ipcMain.handle('get-all-users', async () => {
 ipcMain.handle('admin-activate-license', async (event, { userId, durationDays }) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = await forwardToCentralServer('admin-activate-license', { userId, durationDays });
-      if (res && res.success) return res;
-      const key = db.generateLicenseKey(durationDays || 'lifetime');
-      const localRes = db.activateLicense(userId, key);
+      const key = await db.generateLicenseKey(durationDays || 'lifetime');
+      const localRes = await db.activateLicense(userId, key);
       if (localRes.success) {
         return { success: true, key };
       }
@@ -974,9 +900,7 @@ ipcMain.handle('admin-activate-license', async (event, { userId, durationDays })
 ipcMain.handle('admin-deactivate-license', async (event, userId) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = await forwardToCentralServer('admin-deactivate-license', userId);
-      if (res && res.success) return res;
-      const localRes = db.deactivateLicense(userId);
+      const localRes = await db.deactivateLicense(userId);
       return localRes;
     }
     return { success: false, error: 'Not authorized' };
@@ -988,9 +912,7 @@ ipcMain.handle('admin-deactivate-license', async (event, userId) => {
 ipcMain.handle('admin-delete-user', async (event, userId) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = await forwardToCentralServer('admin-delete-user', userId);
-      if (res && res.success) return res;
-      const localRes = db.deleteUser(userId);
+      const localRes = await db.deleteUser(userId);
       return localRes;
     }
     return { success: false, error: 'Not authorized' };
@@ -1002,9 +924,7 @@ ipcMain.handle('admin-delete-user', async (event, userId) => {
 ipcMain.handle('generate-license-key', async (event, durationDays) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = await forwardToCentralServer('generate-license-key', durationDays || 'lifetime');
-      if (res && res.success) return res;
-      const key = db.generateLicenseKey(durationDays || 'lifetime');
+      const key = await db.generateLicenseKey(durationDays || 'lifetime');
       return { success: true, key };
     }
     return { success: false, error: 'Not authorized' };
@@ -1016,9 +936,7 @@ ipcMain.handle('generate-license-key', async (event, durationDays) => {
 ipcMain.handle('get-active-meetings', async () => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = await forwardToCentralServer('get-active-meetings');
-      if (res && res.success) return res;
-      const meetings = db.getActiveMeetings();
+      const meetings = await db.getActiveMeetings();
       return { success: true, meetings };
     }
     return { success: false, error: 'Not authorized' };
@@ -1030,9 +948,7 @@ ipcMain.handle('get-active-meetings', async () => {
 ipcMain.handle('get-system-settings', async () => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = await forwardToCentralServer('get-system-settings');
-      if (res && res.success) return res;
-      const settings = db.getSettings();
+      const settings = await db.getSettings();
       return { success: true, settings };
     }
     return { success: false, error: 'Not authorized' };
@@ -1044,9 +960,7 @@ ipcMain.handle('get-system-settings', async () => {
 ipcMain.handle('update-system-settings', async (event, updates) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = await forwardToCentralServer('update-system-settings', updates);
-      if (res && res.success) return res;
-      const localRes = db.updateSettings(updates);
+      const localRes = await db.updateSettings(updates);
       return localRes;
     }
     return { success: false, error: 'Not authorized' };
@@ -1058,9 +972,7 @@ ipcMain.handle('update-system-settings', async (event, updates) => {
 ipcMain.handle('admin-toggle-ban', async (event, { userId, isBanned }) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = await forwardToCentralServer('admin-toggle-ban', { userId, isBanned });
-      if (res && res.success) return res;
-      const localRes = db.toggleUserBan(userId, isBanned);
+      const localRes = await db.toggleUserBan(userId);
       return localRes;
     }
     return { success: false, error: 'Not authorized' };
@@ -1072,9 +984,7 @@ ipcMain.handle('admin-toggle-ban', async (event, { userId, isBanned }) => {
 ipcMain.handle('admin-toggle-role', async (event, { userId, isAdmin }) => {
   try {
     if (currentUser && currentUser.isAdmin) {
-      const res = await forwardToCentralServer('admin-toggle-role', { userId, isAdmin });
-      if (res && res.success) return res;
-      const localRes = db.toggleUserRole(userId, isAdmin);
+      const localRes = await db.toggleUserRole(userId);
       return localRes;
     }
     return { success: false, error: 'Not authorized' };
@@ -1182,7 +1092,7 @@ ipcMain.handle('get-system-info', () => {
   };
 });
 
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 
 // Helper function to download file over HTTPS/HTTP with progress monitoring
 function downloadFile(fileUrl, destPath, onProgress) {
@@ -1324,4 +1234,113 @@ ipcMain.handle('get-app-info', () => {
     chrome: process.versions.chrome,
     node: process.versions.node
   };
+});
+
+// ─── WebRTC Firestore-based Signaling ───
+const { collection, addDoc, onSnapshot, query, where, deleteDoc, getDocs } = require('firebase/firestore');
+
+let signalUnsubscribeMap = new Map(); // roomId -> unsubscribe function
+
+ipcMain.handle('send-signal', async (event, { roomId, packet }) => {
+  try {
+    const firestoreDb = db.firestoreDb;
+    if (!firestoreDb) return { success: false, error: 'Database not initialized' };
+
+    const signalsCol = collection(firestoreDb, `meetings/${roomId}/signals`);
+    await addDoc(signalsCol, {
+      sender: packet.sender || (currentUser ? currentUser.email : 'guest'),
+      target: packet.target || null,
+      type: packet.type,
+      data: packet.data ? JSON.stringify(packet.data) : null,
+      createdAt: new Date().getTime()
+    });
+    return { success: true };
+  } catch (err) {
+    console.error('[Signaling] send-signal error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.on('listen-signals', (event, roomId) => {
+  try {
+    const firestoreDb = db.firestoreDb;
+    if (!firestoreDb) return;
+
+    if (signalUnsubscribeMap.has(roomId)) {
+      signalUnsubscribeMap.get(roomId)();
+      signalUnsubscribeMap.delete(roomId);
+    }
+
+    const signalsCol = collection(firestoreDb, `meetings/${roomId}/signals`);
+    const timeLimit = new Date().getTime() - 15000;
+    const q = query(
+      signalsCol,
+      where('createdAt', '>', timeLimit)
+    );
+
+    let processedDocIds = new Set();
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const docId = change.doc.id;
+          if (processedDocIds.has(docId)) return;
+          processedDocIds.add(docId);
+
+          const signalData = change.doc.data();
+          const myEmail = currentUser ? currentUser.email : 'guest';
+          if (signalData.sender === myEmail) return;
+
+          let parsedData = null;
+          if (signalData.data) {
+            try {
+              parsedData = JSON.parse(signalData.data);
+            } catch (e) {
+              parsedData = signalData.data;
+            }
+          }
+
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('signal-received', {
+              sender: signalData.sender,
+              target: signalData.target,
+              type: signalData.type,
+              data: parsedData
+            });
+          }
+        }
+      });
+    }, (err) => {
+      console.error('[Signaling] Firestore onSnapshot error:', err.message);
+    });
+
+    signalUnsubscribeMap.set(roomId, unsubscribe);
+    console.log(`[Signaling] Started listening to room: ${roomId}`);
+  } catch (err) {
+    console.error('[Signaling] listen-signals setup error:', err.message);
+  }
+});
+
+ipcMain.handle('clear-signal-listener', async (event, roomId) => {
+  try {
+    if (signalUnsubscribeMap.has(roomId)) {
+      signalUnsubscribeMap.get(roomId)();
+      signalUnsubscribeMap.delete(roomId);
+      console.log(`[Signaling] Cleared listener for room: ${roomId}`);
+    }
+    
+    // Asynchronously delete signal logs from database to keep it clean
+    const firestoreDb = db.firestoreDb;
+    if (firestoreDb) {
+      const signalsCol = collection(firestoreDb, `meetings/${roomId}/signals`);
+      getDocs(signalsCol).then((snapshot) => {
+        snapshot.forEach((docSnap) => {
+          deleteDoc(docSnap.ref).catch(() => {});
+        });
+      }).catch(() => {});
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });

@@ -24,16 +24,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Send Message ──────────────────────────────────────────────
 async function sendChatMessage(msgText) {
-  if (!socket || !meetingId) return;
+  if (!meetingId) return;
 
   // Render on local screen
   receiveMessage(currentUser.name, msgText, true);
 
-  // Send to server
-  socket.emit('chat-message', {
-    roomId: meetingId,
-    userName: currentUser.name,
-    message: msgText
+  // Send via Firestore
+  window.electronAPI.sendSignal(meetingId, {
+    type: 'chat-message',
+    sender: currentUser.email,
+    data: {
+      userName: currentUser.name,
+      message: msgText
+    }
   });
 }
 

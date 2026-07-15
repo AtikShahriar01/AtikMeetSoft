@@ -1,877 +1,599 @@
 /**
  * ============================================================
  *  AtikMeet - Database Module (Main Process)
- *  Uses lowdb v1.x with FileSync adapter
- *  DB file stored at data/db.json relative to app path
+ *  Google Firebase Cloud Firestore Adapter
  * ============================================================
  */
 
-const low = require('lowdb');
-const FileSync = require('lowdb/adapters/FileSync');
-const path = require('path');
-const fs = require('fs');
+const { initializeApp } = require('firebase/app');
+const { 
+  getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, 
+  collection, getDocs, query, where, limit, orderBy 
+} = require('firebase/firestore');
 const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
 
-// ── Database Initialization ──────────────────────────────────
-
-/** Resolve DB file path relative to app root */
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DB_PATH = path.join(DATA_DIR, 'db.json');
-
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-const adapter = new FileSync(DB_PATH);
-const db = low(adapter);
-
-/** Default database schema */
-const DEFAULT_SCHEMA = {
-  users: [],
-  meetings: [],
-  licenseKeys: [],
-  settings: {
-    installDate: null,
-    trialDays: 7,
-    adminEmail: 'atik@atikmeet.com',
-    maintenanceMode: false,
-    maxParticipants: 150,
-  },
+// ── Firebase Configuration ──────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyD64hpb45ltuKtwIDn2HWlHuXHgUpa5z3U",
+  authDomain: "atikmeet-cloud.firebaseapp.com",
+  projectId: "atikmeet-cloud",
+  storageBucket: "atikmeet-cloud.firebasestorage.app",
+  messagingSenderId: "435211284956",
+  appId: "1:435211284956:web:a3448e638fca3fcf4e1f19",
+  measurementId: "G-SBFBZCQTN2"
 };
 
-// Initialize defaults
-db.defaults(DEFAULT_SCHEMA).write();
-
-// Migration: Ensure new settings properties exist in db settings
-try {
-  const currentSettings = db.get('settings').value();
-  if (currentSettings) {
-    let migrated = false;
-    if (currentSettings.maintenanceMode === undefined) {
-      currentSettings.maintenanceMode = false;
-      migrated = true;
-    }
-    if (currentSettings.maxParticipants === undefined) {
-      currentSettings.maxParticipants = 150;
-      migrated = true;
-    }
-    if (migrated) {
-      db.set('settings', currentSettings).write();
-    }
-  }
-} catch (err) {
-  console.error('[DB] Migration failed:', err.message);
-}
-
-// Seed default keys if empty or missing
-const keys = db.get('licenseKeys').value() || [];
-if (keys.length === 0 || !keys.find(k => k.key === 'ATIK-DEMO-2024-FREE')) {
-  db.set('licenseKeys', [
-    {
-      key: 'ATIK-DEMO-2024-FREE',
-      createdAt: new Date().toISOString(),
-      isActive: false,
-      assignedTo: null,
-      activatedAt: null
-    },
-    {
-      key: 'ATIK-FREE-PUBLIC-2026',
-      createdAt: new Date().toISOString(),
-      isActive: false,
-      assignedTo: null,
-      activatedAt: null,
-      isShared: true
-    },
-    {
-      key: 'ATIK-ADMIN-VIP-2026',
-      createdAt: new Date().toISOString(),
-      isActive: false,
-      assignedTo: null,
-      activatedAt: null
-    }
-  ]).write();
-}
-
-// ── Constants ────────────────────────────────────────────────
+const app = initializeApp(firebaseConfig);
+const firestoreDb = getFirestore(app);
 
 const SALT_ROUNDS = 10;
 const LICENSE_PREFIX = 'ATIK';
-const MAX_PARTICIPANTS = 150;
-const SCREEN_SHARE_RESOLUTION = '1080p';
 
-// ── Helper: Generate License Key Segment ─────────────────────
+// Seed default keys in Firestore on startup
+async function seedDefaultKeys() {
+  try {
+    const defaultKeys = [
+      {
+        key: 'ATIK-DEMO-2024-FREE',
+        createdAt: new Date().toISOString(),
+        isActive: false,
+        assignedTo: null,
+        activatedAt: null,
+        isShared: false
+      },
+      {
+        key: 'ATIK-FREE-PUBLIC-2026',
+        createdAt: new Date().toISOString(),
+        isActive: false,
+        assignedTo: null,
+        activatedAt: null,
+        isShared: true
+      },
+      {
+        key: 'ATIK-ADMIN-VIP-2026',
+        createdAt: new Date().toISOString(),
+        isActive: false,
+        assignedTo: null,
+        activatedAt: null,
+        isShared: false
+      }
+    ];
 
-/**
- * Generates a random 4-character alphanumeric segment (uppercase)
- * @returns {string} A 4-character segment
- */
-function _generateSegment() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let segment = '';
-  for (let i = 0; i < 4; i++) {
-    segment += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (const keyObj of defaultKeys) {
+      const docRef = doc(firestoreDb, 'licenseKeys', keyObj.key);
+      const snapshot = await getDoc(docRef);
+      if (!snapshot.exists()) {
+        await setDoc(docRef, keyObj);
+        console.log(`[Firebase DB] Seeded default license key: ${keyObj.key}`);
+      }
+    }
+  } catch (err) {
+    console.error('[Firebase DB] Seeding default keys failed:', err.message);
   }
-  return segment;
 }
 
-// ── User Functions ───────────────────────────────────────────
+// Run seeding asynchronously
+seedDefaultKeys();
 
-/**
- * Creates a new user with hashed password
- * @param {Object} userData - { name, email, password, isAdmin? }
- * @returns {Object} { success, user?, error? }
- */
-function createUser({ name, email, password, isAdmin = false }) {
+// ── User Management ──────────────────────────────────────────
+
+async function createUser({ name, email, password, role = 'user' }) {
   try {
-    // Check for duplicate email
-    const existingUser = db.get('users').find({ email: email.toLowerCase() }).value();
-    if (existingUser) {
-      return { success: false, error: 'A user with this email already exists.' };
+    if (!email) return { success: false, error: 'Email is required.' };
+    const docRef = doc(firestoreDb, 'users', email.toLowerCase());
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      return { success: false, error: 'User with this email already exists.' };
     }
 
-    // Validate required fields
-    if (!name || !email || !password) {
-      return { success: false, error: 'Name, email, and password are required.' };
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return { success: false, error: 'Invalid email format.' };
-    }
-
-    // Validate password length
-    if (password.length < 6) {
-      return { success: false, error: 'Password must be at least 6 characters.' };
-    }
-
-    // Hash password
     const hashedPassword = bcrypt.hashSync(password, SALT_ROUNDS);
-
     const newUser = {
-      id: uuidv4(),
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
+      id: email.toLowerCase(),
+      name,
+      email: email.toLowerCase(),
       password: hashedPassword,
-      createdAt: new Date().toISOString(),
-      isAdmin: isAdmin,
+      role,
+      isAdmin: role === 'admin',
+      isVIP: role === 'admin' || false,
       licenseKey: null,
-      licenseActivated: false,
-      isVIP: false,
-      lastLogin: null,
+      licenseExpiry: null,
+      createdAt: new Date().toISOString(),
+      isBanned: false
     };
 
-    db.get('users').push(newUser).write();
-
-    // Return user without password
-    const { password: _, ...safeUser } = newUser;
-    return { success: true, user: safeUser };
+    await setDoc(docRef, newUser);
+    return { success: true, user: { ...newUser, password: undefined } };
   } catch (error) {
-    console.error('[DB] createUser error:', error.message);
-    return { success: false, error: 'Failed to create user. Please try again.' };
+    console.error('[Firebase DB] createUser error:', error.message);
+    return { success: false, error: 'Failed to create user.' };
   }
 }
 
-/**
- * Authenticates a user with email and password
- * @param {string} email
- * @param {string} password
- * @returns {Object} { success, user?, error? }
- */
-function loginUser(email, password) {
+async function loginUser(email, password) {
   try {
-    if (!email || !password) {
-      return { success: false, error: 'Email and password are required.' };
+    if (!email || !password) return { success: false, error: 'Email and password are required.' };
+    const docRef = doc(firestoreDb, 'users', email.toLowerCase());
+    const snapshot = await getDoc(docRef);
+    if (!snapshot.exists()) {
+      return { success: false, error: 'Invalid email or password.' };
     }
 
-    const user = db.get('users').find({ email: email.toLowerCase().trim() }).value();
-
-    if (!user) {
-      return { success: false, error: 'No account found with this email.' };
-    }
-
-    // Block authentication if the user is banned
+    const user = snapshot.data();
     if (user.isBanned) {
       return { success: false, error: 'Your account has been banned by the administrator.' };
     }
 
-    // Block non-admin login if system is in Maintenance Mode
-    const settings = db.get('settings').value();
-    if (settings && settings.maintenanceMode && !user.isAdmin) {
-      return { success: false, error: 'The system is currently under maintenance. Please try again later.' };
-    }
-
-    // Compare passwords
     const isMatch = bcrypt.compareSync(password, user.password);
     if (!isMatch) {
-      return { success: false, error: 'Incorrect password.' };
+      return { success: false, error: 'Invalid email or password.' };
     }
 
-    // Update last login timestamp
-    db.get('users')
-      .find({ id: user.id })
-      .assign({ lastLogin: new Date().toISOString() })
-      .write();
-
-    // Return user without password
-    const { password: _, ...safeUser } = user;
-    safeUser.lastLogin = new Date().toISOString();
-    return { success: true, user: safeUser };
+    return { success: true, user: { ...user, password: undefined } };
   } catch (error) {
-    console.error('[DB] loginUser error:', error.message);
-    return { success: false, error: 'Login failed. Please try again.' };
+    console.error('[Firebase DB] loginUser error:', error.message);
+    return { success: false, error: 'Login failed.' };
   }
 }
 
-/**
- * Retrieves a user by ID (password excluded)
- * @param {string} userId
- * @returns {Object|null} User object or null
- */
-function getUserById(userId) {
+async function getUserById(email) {
   try {
-    const user = db.get('users').find({ id: userId }).value();
-    if (!user) return null;
-
-    const { password, ...safeUser } = user;
-    return safeUser;
+    if (!email) return null;
+    const docRef = doc(firestoreDb, 'users', email.toLowerCase());
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      return snapshot.data();
+    }
+    return null;
   } catch (error) {
-    console.error('[DB] getUserById error:', error.message);
+    console.error('[Firebase DB] getUserById error:', error.message);
     return null;
   }
 }
 
-/**
- * Retrieves all users (passwords excluded)
- * @returns {Array} Array of user objects
- */
-function getAllUsers() {
+async function getAllUsers() {
   try {
-    const users = db.get('users').value();
-    return users.map(({ password, ...safeUser }) => safeUser);
+    const colRef = collection(firestoreDb, 'users');
+    const snapshot = await getDocs(colRef);
+    const users = [];
+    snapshot.forEach(docSnap => {
+      users.push(docSnap.data());
+    });
+    return users;
   } catch (error) {
-    console.error('[DB] getAllUsers error:', error.message);
+    console.error('[Firebase DB] getAllUsers error:', error.message);
     return [];
   }
 }
 
-/**
- * Updates a user's profile fields
- * @param {string} userId
- * @param {Object} updates - Fields to update (password will be re-hashed if provided)
- * @returns {Object} { success, user?, error? }
- */
-function updateUser(userId, updates) {
+async function updateUser(email, data) {
   try {
-    const user = db.get('users').find({ id: userId }).value();
-    if (!user) {
-      return { success: false, error: 'User not found.' };
-    }
-
-    // If password is being updated, hash it
+    if (!email) return { success: false, error: 'Email is required.' };
+    const docRef = doc(firestoreDb, 'users', email.toLowerCase());
+    
+    // Sanitize updates to prevent overwriting key internal IDs
+    const updates = { ...data };
+    delete updates.id;
+    delete updates.email;
     if (updates.password) {
-      if (updates.password.length < 6) {
-        return { success: false, error: 'Password must be at least 6 characters.' };
-      }
       updates.password = bcrypt.hashSync(updates.password, SALT_ROUNDS);
     }
 
-    // If email is being updated, check for duplicates
-    if (updates.email) {
-      updates.email = updates.email.toLowerCase().trim();
-      const existingUser = db.get('users').find({ email: updates.email }).value();
-      if (existingUser && existingUser.id !== userId) {
-        return { success: false, error: 'This email is already in use by another account.' };
-      }
-    }
-
-    // Trim name if provided
-    if (updates.name) {
-      updates.name = updates.name.trim();
-    }
-
-    db.get('users').find({ id: userId }).assign(updates).write();
-
-    const updatedUser = db.get('users').find({ id: userId }).value();
-    const { password: _, ...safeUser } = updatedUser;
-    return { success: true, user: safeUser };
+    await updateDoc(docRef, updates);
+    return { success: true };
   } catch (error) {
-    console.error('[DB] updateUser error:', error.message);
+    console.error('[Firebase DB] updateUser error:', error.message);
     return { success: false, error: 'Failed to update user.' };
   }
 }
 
-/**
- * Deletes a user by ID
- * @param {string} userId
- * @returns {Object} { success, error? }
- */
-function deleteUser(userId) {
+async function deleteUser(email) {
   try {
-    const user = db.get('users').find({ id: userId }).value();
-    if (!user) {
-      return { success: false, error: 'User not found.' };
-    }
-
-    // Prevent deleting admin
-    if (user.isAdmin) {
+    if (!email) return { success: false, error: 'Email is required.' };
+    const user = await getUserById(email);
+    if (user && user.isAdmin) {
       return { success: false, error: 'Cannot delete admin user.' };
     }
-
-    db.get('users').remove({ id: userId }).write();
-
-    // Also deactivate any associated license keys
-    db.get('licenseKeys')
-      .filter({ assignedTo: userId })
-      .each((key) => {
-        key.isActive = false;
-        key.assignedTo = null;
-      })
-      .write();
-
+    const docRef = doc(firestoreDb, 'users', email.toLowerCase());
+    await deleteDoc(docRef);
     return { success: true };
   } catch (error) {
-    console.error('[DB] deleteUser error:', error.message);
+    console.error('[Firebase DB] deleteUser error:', error.message);
     return { success: false, error: 'Failed to delete user.' };
   }
 }
 
-/**
- * Retrieves the global system settings
- * @returns {Object} Settings object
- */
-function getSettings() {
+// ── Settings ─────────────────────────────────────────────────
+
+async function getSettings() {
   try {
-    return db.get('settings').value() || {};
+    const docRef = doc(firestoreDb, 'settings', 'system');
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      return snapshot.data();
+    } else {
+      const defaultSettings = {
+        installDate: new Date().toISOString(),
+        trialDays: 7,
+        adminEmail: 'atik@atikmeet.com',
+        maintenanceMode: false,
+        maxParticipants: 150
+      };
+      await setDoc(docRef, defaultSettings);
+      return defaultSettings;
+    }
   } catch (error) {
-    console.error('[DB] getSettings error:', error.message);
-    return {};
+    console.error('[Firebase DB] getSettings error:', error.message);
+    return null;
   }
 }
 
-/**
- * Updates the global system settings
- * @param {Object} updates
- * @returns {Object} { success, settings?, error? }
- */
-function updateSettings(updates) {
+async function updateSettings(updates) {
   try {
-    db.get('settings').assign(updates).write();
-    return { success: true, settings: db.get('settings').value() };
+    const docRef = doc(firestoreDb, 'settings', 'system');
+    await updateDoc(docRef, updates);
+    return { success: true };
   } catch (error) {
-    console.error('[DB] updateSettings error:', error.message);
-    return { success: false, error: 'Failed to update system settings.' };
+    console.error('[Firebase DB] updateSettings error:', error.message);
+    return { success: false, error: 'Failed to update settings.' };
   }
 }
 
-/**
- * Bans or unbans a user account
- * @param {string} userId
- * @param {boolean} isBanned
- * @returns {Object} { success, error? }
- */
-function toggleUserBan(userId, isBanned) {
+async function toggleUserBan(email) {
   try {
-    const user = db.get('users').find({ id: userId }).value();
+    const user = await getUserById(email);
     if (!user) return { success: false, error: 'User not found.' };
     if (user.isAdmin) return { success: false, error: 'Cannot ban admin user.' };
-    
-    db.get('users').find({ id: userId }).assign({ isBanned }).write();
-    return { success: true };
+
+    const newBanState = !user.isBanned;
+    await updateUser(email, { isBanned: newBanState });
+    return { success: true, isBanned: newBanState };
   } catch (error) {
-    console.error('[DB] toggleUserBan error:', error.message);
-    return { success: false, error: 'Failed to toggle ban status.' };
+    console.error('[Firebase DB] toggleUserBan error:', error.message);
+    return { success: false, error: 'Failed to toggle ban state.' };
   }
 }
 
-/**
- * Promotes or demotes a user's administrator status
- * @param {string} userId
- * @param {boolean} isAdmin
- * @returns {Object} { success, error? }
- */
-function toggleUserRole(userId, isAdmin) {
+async function toggleUserRole(email) {
   try {
-    const user = db.get('users').find({ id: userId }).value();
+    const user = await getUserById(email);
     if (!user) return { success: false, error: 'User not found.' };
-    if (user.email === 'admin@atikmeet.com') return { success: false, error: 'Cannot demote the system root admin.' };
-    
-    db.get('users').find({ id: userId }).assign({ isAdmin }).write();
-    return { success: true };
+    if (user.email === 'admin@atikmeet.com') {
+      return { success: false, error: 'Cannot change root admin role.' };
+    }
+
+    const newRole = user.role === 'admin' ? 'user' : 'admin';
+    await updateUser(email, {
+      role: newRole,
+      isAdmin: newRole === 'admin',
+      isVIP: newRole === 'admin' || user.isVIP // Admins are always VIP
+    });
+    return { success: true, role: newRole };
   } catch (error) {
-    console.error('[DB] toggleUserRole error:', error.message);
-    return { success: false, error: 'Failed to update user role.' };
+    console.error('[Firebase DB] toggleUserRole error:', error.message);
+    return { success: false, error: 'Failed to toggle user role.' };
   }
 }
 
-// ── License Key Functions ────────────────────────────────────
+// ── License Management ────────────────────────────────────────
 
-/**
- * Generates a new license key in ATIK-XXXX-XXXX-XXXX format
- * @param {string|number} durationDays - 'lifetime', 30, 365, etc.
- * @returns {string} The license key string
- */
-function generateLicenseKey(durationDays = 'lifetime') {
+async function generateLicenseKey(durationDays = 30) {
   try {
-    const key = `${LICENSE_PREFIX}-${_generateSegment()}-${_generateSegment()}-${_generateSegment()}`;
-    const licenseRecord = {
-      key: key,
+    const generateSegment = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+    const key = `${LICENSE_PREFIX}-${generateSegment()}-${generateSegment()}-${generateSegment()}`;
+    const newKeyObj = {
+      key,
+      durationDays,
       createdAt: new Date().toISOString(),
       isActive: false,
       assignedTo: null,
       activatedAt: null,
-      durationDays: durationDays,
-      expiresAt: null
+      isShared: false
     };
 
-    db.get('licenseKeys').push(licenseRecord).write();
-
+    const docRef = doc(firestoreDb, 'licenseKeys', key);
+    await setDoc(docRef, newKeyObj);
     return key;
   } catch (error) {
-    console.error('[DB] generateLicenseKey error:', error.message);
+    console.error('[Firebase DB] generateLicenseKey error:', error.message);
     return null;
   }
 }
 
-/**
- * Activates a license key for a specific user
- * @param {string} userId
- * @param {string} key - The license key string
- * @returns {Object} { success, error? }
- */
-function activateLicense(userId, key) {
+async function activateLicense(email, key) {
   try {
-    // Validate key format: ATIK-XXXX-XXXX-XXXX
-    const keyRegex = /^ATIK-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
-    if (!keyRegex.test(key.toUpperCase())) {
-      return { success: false, error: 'Invalid license key format. Expected: ATIK-XXXX-XXXX-XXXX' };
+    if (!email || !key) return { success: false, error: 'Email and key are required.' };
+    const keyDocRef = doc(firestoreDb, 'licenseKeys', key.toUpperCase());
+    const keySnapshot = await getDoc(keyDocRef);
+    if (!keySnapshot.exists()) {
+      return { success: false, error: 'Invalid license key.' };
     }
 
-    const normalizedKey = key.toUpperCase();
-
-    // Check if key exists in our database
-    const licenseRecord = db.get('licenseKeys').find({ key: normalizedKey }).value();
-    if (!licenseRecord) {
-      return { success: false, error: 'License key not found.' };
+    const license = keySnapshot.data();
+    if (license.isActive && !license.isShared) {
+      return { success: false, error: 'License key has already been used.' };
     }
 
-    // Check if key is already activated by another user (skip check for shared/public keys)
-    const isSharedKey = licenseRecord.isShared || normalizedKey.includes('FREE') || normalizedKey.includes('DEMO') || normalizedKey.includes('PUBLIC');
-    if (!isSharedKey && licenseRecord.isActive && licenseRecord.assignedTo !== userId) {
-      return { success: false, error: 'This license key is already in use by another user.' };
-    }
+    const user = await getUserById(email);
+    if (!user) return { success: false, error: 'User not found.' };
 
-    // Check if user exists
-    const user = db.get('users').find({ id: userId }).value();
-    if (!user) {
-      return { success: false, error: 'User not found.' };
-    }
-
-    // Calculate expiration date
-    let expiresAt = null;
-    const duration = licenseRecord.durationDays || 'lifetime';
-    if (duration !== 'lifetime') {
-      const days = parseInt(duration, 10) || 30;
-      const expDate = new Date();
-      expDate.setDate(expDate.getDate() + days);
-      expiresAt = expDate.toISOString();
-    }
-
-    // Activate the license key
-    db.get('licenseKeys')
-      .find({ key: normalizedKey })
-      .assign({
-        isActive: true,
-        assignedTo: isSharedKey ? 'multiple_users' : userId,
-        activatedAt: new Date().toISOString(),
-        expiresAt: expiresAt
-      })
-      .write();
-
-    // Update the user's license status
-    db.get('users')
-      .find({ id: userId })
-      .assign({
-        licenseKey: normalizedKey,
-        licenseActivated: true,
-        isVIP: true,
-        licenseExpiresAt: expiresAt
-      })
-      .write();
-
-    return { success: true };
-  } catch (error) {
-    console.error('[DB] activateLicense error:', error.message);
-    return { success: false, error: 'Failed to activate license key.' };
-  }
-}
-
-/**
- * Deactivates a license key and removes it from the user
- * @param {string} userIdOrKey - The license key string or user ID
- * @returns {Object} { success, error? }
- */
-function deactivateLicense(userIdOrKey) {
-  try {
-    if (!userIdOrKey) return { success: false, error: 'Key or user ID is required.' };
-    
-    let licenseRecord;
-    if (userIdOrKey.toUpperCase().startsWith('ATIK-')) {
-      licenseRecord = db.get('licenseKeys').find({ key: userIdOrKey.toUpperCase() }).value();
+    const durationDays = license.durationDays;
+    let expiryDate = null;
+    if (durationDays !== 'lifetime') {
+      const days = parseInt(durationDays) || 30;
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + days);
+      expiryDate = expiry.toISOString();
     } else {
-      licenseRecord = db.get('licenseKeys').find({ assignedTo: userIdOrKey }).value();
+      expiryDate = 'lifetime';
     }
 
-    if (!licenseRecord) {
-      // If we passed a userId but no key is assigned in licenseKeys, reset user fields anyway
-      db.get('users')
-        .find({ id: userIdOrKey })
-        .assign({
-          licenseKey: null,
-          licenseActivated: false,
-          isVIP: false,
-          licenseExpiresAt: null
-        })
-        .write();
-      return { success: true };
+    // Update User Profile
+    await updateUser(email, {
+      isVIP: true,
+      licenseKey: key,
+      licenseExpiry: expiryDate
+    });
+
+    // Update License State (if not public/shared key)
+    if (!license.isShared) {
+      await updateDoc(keyDocRef, {
+        isActive: true,
+        assignedTo: email.toLowerCase(),
+        activatedAt: new Date().toISOString()
+      });
     }
 
-    const normalizedKey = licenseRecord.key;
-    const assignedUserId = licenseRecord.assignedTo || userIdOrKey;
-
-    // Deactivate the license key record
-    db.get('licenseKeys')
-      .find({ key: normalizedKey })
-      .assign({
-        isActive: false,
-        assignedTo: null,
-        activatedAt: null,
-        expiresAt: null
-      })
-      .write();
-
-    // Remove license from user if assigned
-    db.get('users')
-      .find({ id: assignedUserId })
-      .assign({
-        licenseKey: null,
-        licenseActivated: false,
-        isVIP: false,
-        licenseExpiresAt: null
-      })
-      .write();
-
-    return { success: true };
+    return { success: true, expiryDate };
   } catch (error) {
-    console.error('[DB] deactivateLicense error:', error.message);
-    return { success: false, error: 'Failed to deactivate license key.' };
+    console.error('[Firebase DB] activateLicense error:', error.message);
+    return { success: false, error: 'Failed to activate license.' };
   }
 }
 
-// ── Trial Functions ──────────────────────────────────────────
-
-/**
- * Returns the number of trial days remaining
- * @returns {number} Days remaining (0 if expired)
- */
-function getTrialDaysRemaining() {
+async function deactivateLicense(email) {
   try {
-    const settings = db.get('settings').value();
+    if (!email) return { success: false, error: 'Email is required.' };
+    const user = await getUserById(email);
+    if (!user) return { success: false, error: 'User not found.' };
 
-    if (!settings.installDate) {
-      // If no install date is set, initialize it now
-      setInstallDate();
-      return settings.trialDays;
+    const key = user.licenseKey;
+    await updateUser(email, {
+      isVIP: user.role === 'admin', // Admins retain VIP
+      licenseKey: null,
+      licenseExpiry: null
+    });
+
+    if (key) {
+      const keyDocRef = doc(firestoreDb, 'licenseKeys', key.toUpperCase());
+      const keySnapshot = await getDoc(keyDocRef);
+      if (keySnapshot.exists()) {
+        const license = keySnapshot.data();
+        if (!license.isShared) {
+          await updateDoc(keyDocRef, {
+            isActive: false,
+            assignedTo: null,
+            activatedAt: null
+          });
+        }
+      }
     }
-
-    const installDate = new Date(settings.installDate);
-    const now = new Date();
-    const diffMs = now.getTime() - installDate.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const remaining = Math.max(0, settings.trialDays - diffDays);
-
-    return remaining;
+    return { success: true };
   } catch (error) {
-    console.error('[DB] getTrialDaysRemaining error:', error.message);
+    console.error('[Firebase DB] deactivateLicense error:', error.message);
+    return { success: false, error: 'Failed to deactivate license.' };
+  }
+}
+
+async function getTrialDaysRemaining() {
+  try {
+    const settings = await getSettings();
+    if (!settings || !settings.installDate) return 0;
+    const installTime = new Date(settings.installDate).getTime();
+    const nowTime = new Date().getTime();
+    const diffDays = (nowTime - installTime) / (1000 * 60 * 60 * 24);
+    const remaining = (settings.trialDays || 7) - diffDays;
+    return Math.max(0, Math.ceil(remaining));
+  } catch (error) {
+    console.error('[Firebase DB] getTrialDaysRemaining error:', error.message);
     return 0;
   }
 }
 
-/**
- * Checks whether the trial period has expired
- * @returns {boolean} True if trial has expired
- */
-function isTrialExpired() {
-  return getTrialDaysRemaining() <= 0;
+async function isTrialExpired() {
+  const remaining = await getTrialDaysRemaining();
+  return remaining <= 0;
 }
 
-/**
- * Sets the installation date to now (only if not already set)
- * @returns {Object} { success, installDate }
- */
-function setInstallDate() {
+async function setInstallDate() {
   try {
-    const settings = db.get('settings').value();
-
-    if (settings.installDate) {
-      return { success: true, installDate: settings.installDate, message: 'Install date already set.' };
+    const settings = await getSettings();
+    if (settings && !settings.installDate) {
+      await updateSettings({ installDate: new Date().toISOString() });
     }
-
-    const installDate = new Date().toISOString();
-    db.get('settings').assign({ installDate }).write();
-
-    return { success: true, installDate };
   } catch (error) {
-    console.error('[DB] setInstallDate error:', error.message);
-    return { success: false, error: 'Failed to set install date.' };
+    console.error('[Firebase DB] setInstallDate error:', error.message);
   }
 }
 
-// ── Meeting Functions ────────────────────────────────────────
+// ── Meeting Management ────────────────────────────────────────
 
-/**
- * Creates a new meeting record
- * @param {Object} meetingData - { id, title, hostId, hostName, type? }
- * @returns {Object} { success, meeting?, error? }
- */
-function createMeeting({ id, title, hostId, hostName, type = 'instant' }) {
+async function createMeeting({ id, title, hostId, hostName, type = 'instant' }) {
   try {
-    if (!id || !hostId) {
-      return { success: false, error: 'Meeting ID and host ID are required.' };
-    }
-
-    const meeting = {
+    const newMeeting = {
       id,
-      title: title || 'AtikMeet Meeting',
-      hostId,
-      hostName: hostName || 'Unknown',
-      type, // 'instant', 'scheduled'
-      createdAt: new Date().toISOString(),
-      startedAt: new Date().toISOString(),
-      endedAt: null,
+      title: title || `Meeting with ${hostName}`,
+      hostId: hostId.toLowerCase(),
+      hostName,
+      type,
       isActive: true,
-      participants: [],
-      maxParticipants: MAX_PARTICIPANTS,
-      screenShareResolution: SCREEN_SHARE_RESOLUTION,
-      chatMessages: [],
-      recordingPath: null,
-      duration: 0,
+      startedAt: new Date().toISOString(),
+      participants: []
     };
 
-    db.get('meetings').push(meeting).write();
-
-    return { success: true, meeting };
+    const docRef = doc(firestoreDb, 'meetings', id);
+    await setDoc(docRef, newMeeting);
+    return { success: true, meeting: newMeeting };
   } catch (error) {
-    console.error('[DB] createMeeting error:', error.message);
+    console.error('[Firebase DB] createMeeting error:', error.message);
     return { success: false, error: 'Failed to create meeting.' };
   }
 }
 
-/**
- * Retrieves a meeting by ID
- * @param {string} meetingId
- * @returns {Object|null} Meeting object or null
- */
-function getMeeting(meetingId) {
+async function getMeeting(meetingId) {
   try {
-    return db.get('meetings').find({ id: meetingId }).value() || null;
+    if (!meetingId) return null;
+    const docRef = doc(firestoreDb, 'meetings', meetingId);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      return snapshot.data();
+    }
+    return null;
   } catch (error) {
-    console.error('[DB] getMeeting error:', error.message);
+    console.error('[Firebase DB] getMeeting error:', error.message);
     return null;
   }
 }
 
-/**
- * Updates a meeting's fields
- * @param {string} meetingId
- * @param {Object} updates
- * @returns {Object} { success, meeting?, error? }
- */
-function updateMeeting(meetingId, updates) {
+async function updateMeeting(meetingId, updates) {
   try {
-    const meeting = db.get('meetings').find({ id: meetingId }).value();
-    if (!meeting) {
-      return { success: false, error: 'Meeting not found.' };
-    }
-
-    db.get('meetings').find({ id: meetingId }).assign(updates).write();
-
-    const updatedMeeting = db.get('meetings').find({ id: meetingId }).value();
-    return { success: true, meeting: updatedMeeting };
+    if (!meetingId) return { success: false, error: 'Meeting ID is required.' };
+    const docRef = doc(firestoreDb, 'meetings', meetingId);
+    await updateDoc(docRef, updates);
+    return { success: true };
   } catch (error) {
-    console.error('[DB] updateMeeting error:', error.message);
+    console.error('[Firebase DB] updateMeeting error:', error.message);
     return { success: false, error: 'Failed to update meeting.' };
   }
 }
 
-/**
- * Ends a meeting by setting isActive to false and recording end time
- * @param {string} meetingId
- * @returns {Object} { success, meeting?, error? }
- */
-function endMeeting(meetingId) {
+async function endMeeting(meetingId) {
   try {
-    const meeting = db.get('meetings').find({ id: meetingId }).value();
-    if (!meeting) {
-      return { success: false, error: 'Meeting not found.' };
-    }
-
-    const endedAt = new Date().toISOString();
-    const startedAt = new Date(meeting.startedAt);
-    const durationMs = new Date(endedAt).getTime() - startedAt.getTime();
-    const durationSeconds = Math.floor(durationMs / 1000);
-
-    db.get('meetings')
-      .find({ id: meetingId })
-      .assign({
-        isActive: false,
-        endedAt,
-        duration: durationSeconds,
-      })
-      .write();
-
-    const updatedMeeting = db.get('meetings').find({ id: meetingId }).value();
-    return { success: true, meeting: updatedMeeting };
+    return await updateMeeting(meetingId, {
+      isActive: false,
+      endedAt: new Date().toISOString()
+    });
   } catch (error) {
-    console.error('[DB] endMeeting error:', error.message);
+    console.error('[Firebase DB] endMeeting error:', error.message);
     return { success: false, error: 'Failed to end meeting.' };
   }
 }
 
-/**
- * Retrieves all meetings, sorted by most recent first
- * @returns {Array} Array of meeting objects
- */
-function getAllMeetings() {
+async function deleteMeeting(meetingId) {
   try {
-    return db.get('meetings').sortBy('createdAt').reverse().value();
-  } catch (error) {
-    console.error('[DB] getAllMeetings error:', error.message);
-    return [];
-  }
-}
-
-/**
- * Retrieves all currently active meetings
- * @returns {Array} Array of active meeting objects
- */
-function getActiveMeetings() {
-  try {
-    return db.get('meetings').filter({ isActive: true }).value();
-  } catch (error) {
-    console.error('[DB] getActiveMeetings error:', error.message);
-    return [];
-  }
-}
-
-/**
- * Retrieves all meetings for a specific user (as host or participant)
- * @param {string} userId
- * @returns {Array} Array of meeting objects
- */
-function getUserMeetings(userId) {
-  try {
-    return db
-      .get('meetings')
-      .filter((meeting) => {
-        return (
-          meeting.hostId === userId ||
-          (meeting.participants && meeting.participants.some((p) => p.userId === userId))
-        );
-      })
-      .sortBy('createdAt')
-      .reverse()
-      .value();
-  } catch (error) {
-    console.error('[DB] getUserMeetings error:', error.message);
-    return [];
-  }
-}
-
-function deleteMeeting(meetingId) {
-  try {
-    db.get('meetings')
-      .remove({ id: meetingId })
-      .write();
+    if (!meetingId) return { success: false, error: 'Meeting ID is required.' };
+    const docRef = doc(firestoreDb, 'meetings', meetingId);
+    await deleteDoc(docRef);
     return { success: true };
   } catch (error) {
-    console.error('[DB] deleteMeeting error:', error.message);
+    console.error('[Firebase DB] deleteMeeting error:', error.message);
     return { success: false, error: 'Failed to delete meeting.' };
+  }
+}
+
+async function getAllMeetings() {
+  try {
+    const colRef = collection(firestoreDb, 'meetings');
+    const snapshot = await getDocs(colRef);
+    const meetings = [];
+    snapshot.forEach(docSnap => {
+      meetings.push(docSnap.data());
+    });
+    return meetings;
+  } catch (error) {
+    console.error('[Firebase DB] getAllMeetings error:', error.message);
+    return [];
+  }
+}
+
+async function getActiveMeetings() {
+  try {
+    const colRef = collection(firestoreDb, 'meetings');
+    const q = query(colRef, where('isActive', '==', true));
+    const snapshot = await getDocs(q);
+    const meetings = [];
+    snapshot.forEach(docSnap => {
+      meetings.push(docSnap.data());
+    });
+    return meetings;
+  } catch (error) {
+    console.error('[Firebase DB] getActiveMeetings error:', error.message);
+    return [];
+  }
+}
+
+async function getUserMeetings(userId) {
+  try {
+    if (!userId) return [];
+    const lowerUserId = userId.toLowerCase();
+    const colRef = collection(firestoreDb, 'meetings');
+    
+    // Query where user is host
+    const q1 = query(colRef, where('hostId', '==', lowerUserId));
+    const snap1 = await getDocs(q1);
+    
+    const meetingsMap = new Map();
+    snap1.forEach(docSnap => {
+      meetingsMap.set(docSnap.id, docSnap.data());
+    });
+
+    // Also fetch all meetings and check if userId is in participants list
+    // (Firestore doesn't support complex nested array-contains easily in standard query here without index)
+    const allSnap = await getDocs(colRef);
+    allSnap.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.participants && data.participants.some(p => p.userId && p.userId.toLowerCase() === lowerUserId)) {
+        meetingsMap.set(docSnap.id, data);
+      }
+    });
+
+    const meetings = Array.from(meetingsMap.values());
+    meetings.sort((a, b) => new Date(b.startedAt || b.createdAt) - new Date(a.startedAt || a.createdAt));
+    return meetings;
+  } catch (error) {
+    console.error('[Firebase DB] getUserMeetings error:', error.message);
+    return [];
   }
 }
 
 // ── Statistics ───────────────────────────────────────────────
 
-/**
- * Returns aggregate stats for the admin dashboard
- * @returns {Object} Stats object
- */
-function getStats() {
+async function getStats() {
   try {
-    const users = db.get('users').value();
-    const meetings = db.get('meetings').value();
-    const licenseKeys = db.get('licenseKeys').value();
-    const activeMeetings = meetings.filter((m) => m.isActive);
-    const activeLicenses = licenseKeys.filter((k) => k.isActive);
-    const vipUsers = users.filter((u) => u.isVIP);
+    const users = await getAllUsers();
+    const meetings = await getAllMeetings();
+    
+    const colRefKeys = collection(firestoreDb, 'licenseKeys');
+    const snapKeys = await getDocs(colRefKeys);
+    let totalKeys = 0;
+    let activeKeys = 0;
+    snapKeys.forEach(docSnap => {
+      totalKeys++;
+      if (docSnap.data().isActive) activeKeys++;
+    });
 
-    // Calculate total meeting duration in seconds
-    const totalDuration = meetings.reduce((sum, m) => sum + (m.duration || 0), 0);
-
-    // Calculate average meeting duration
-    const completedMeetings = meetings.filter((m) => !m.isActive && m.duration > 0);
-    const avgDuration =
-      completedMeetings.length > 0
-        ? Math.floor(
-            completedMeetings.reduce((sum, m) => sum + m.duration, 0) / completedMeetings.length
-          )
-        : 0;
-
-    // Get today's meetings
-    const today = new Date().toISOString().split('T')[0];
-    const todayMeetings = meetings.filter((m) => m.createdAt && m.createdAt.startsWith(today));
+    const liveMeetings = meetings.filter(m => m.isActive).length;
 
     return {
       totalUsers: users.length,
       totalMeetings: meetings.length,
-      activeMeetings: activeMeetings.length,
-      totalLicenseKeys: licenseKeys.length,
-      activeLicenses: activeLicenses.length,
-      vipUsers: vipUsers.length,
-      totalDuration,
-      avgDuration,
-      todayMeetings: todayMeetings.length,
-      trialDaysRemaining: getTrialDaysRemaining(),
-      isTrialExpired: isTrialExpired(),
-      maxParticipants: MAX_PARTICIPANTS,
-      screenShareResolution: SCREEN_SHARE_RESOLUTION,
+      liveMeetings,
+      totalKeys,
+      activeKeys
     };
   } catch (error) {
-    console.error('[DB] getStats error:', error.message);
+    console.error('[Firebase DB] getStats error:', error.message);
     return {
       totalUsers: 0,
       totalMeetings: 0,
-      activeMeetings: 0,
-      totalLicenseKeys: 0,
-      activeLicenses: 0,
-      vipUsers: 0,
-      totalDuration: 0,
-      avgDuration: 0,
-      todayMeetings: 0,
-      trialDaysRemaining: 0,
-      isTrialExpired: true,
-      maxParticipants: MAX_PARTICIPANTS,
-      screenShareResolution: SCREEN_SHARE_RESOLUTION,
+      liveMeetings: 0,
+      totalKeys: 0,
+      activeKeys: 0
     };
   }
 }
 
-// ── Module Exports ───────────────────────────────────────────
-
 module.exports = {
-  db,
+  firestoreDb, // Expose for signaling or settings
   createUser,
   loginUser,
   getUserById,

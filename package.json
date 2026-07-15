@@ -1,6 +1,6 @@
 {
   "name": "atikmeet",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AtikMeet - Professional Video Conferencing Desktop App by Atik Shahriar",
   "main": "main.js",
   "author": "Atik Shahriar",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "firebase": "^12.16.0",
     "lowdb": "^1.0.0",
     "socket.io": "^4.7.4",
     "socket.io-client": "^4.7.4",

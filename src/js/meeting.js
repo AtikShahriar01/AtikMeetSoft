@@ -249,100 +249,75 @@ function showBrowserPermissionGuide() {
 }
 
 // ── Connect Socket.io Signaling ──────────────────────────────
+// ── Connect Firestore-based WebRTC Signaling ──────────────────
 async function initSignaling() {
-  const signalInfo = await window.electronAPI.getSignalingInfo();
-  signalingUrl = signalInfo.url;
+  console.log('Initializing Firestore-based WebRTC signaling...');
   
-  // Dynamically load Socket.io Client
-  const script = document.createElement('script');
-  if (window.location.protocol === 'file:') {
-    script.src = '../utils/socket.io.min.js';
-  } else {
-    script.src = `${signalingUrl}/socket.io/socket.io.js`;
-  }
-  document.head.appendChild(script);
+  // Start listening to signals on the Firestore collection
+  window.electronAPI.listenSignals(meetingId);
 
-  script.onload = () => {
-    socket = io(signalingUrl);
+  // Join Room - Broadcast a 'join' signal to all existing members in the room
+  window.electronAPI.sendSignal(meetingId, {
+    type: 'join',
+    sender: currentUser.email || 'guest',
+    data: { userName: currentUser.name }
+  });
 
-    socket.on('connect', () => {
-      console.log('Connected to signaling server');
-      
-      // Join Room
-      socket.emit('join-room', {
-        roomId: meetingId,
-        userId: currentUser.id,
-        userName: currentUser.name,
-        isHost: isHost
-      });
-    });
+  // Clean up on window close
+  window.addEventListener('beforeunload', () => {
+    window.electronAPI.sendSignal(meetingId, { type: 'leave', sender: currentUser.email || 'guest' });
+    window.electronAPI.clearSignalListener(meetingId);
+  });
 
-    // Handle incoming events
-    socket.on('user-joined', (data) => {
-      console.log('User joined room:', data);
-      handlePeerJoin(data.socketId, data.userName);
-    });
+  // Handle incoming signals
+  window.electronAPI.onSignalReceived(async (signal) => {
+    const { sender, target, type, data } = signal;
+    
+    // Ignore signals that are targeted at someone else
+    const myEmail = currentUser ? currentUser.email : 'guest';
+    if (target && target !== myEmail) return;
 
-    socket.on('offer', async (data) => {
-      await handleOffer(data.senderId, data.offer || data.sdp, data.senderName || data.userName);
-    });
-
-    socket.on('answer', async (data) => {
-      await handleAnswer(data.senderId, data.answer || data.sdp);
-    });
-
-    socket.on('ice-candidate', async (data) => {
-      await handleIceCandidate(data.senderId, data.candidate);
-    });
-
-    socket.on('user-left', (data) => {
-      console.log('User left room:', data);
-      removePeerConnection(data.socketId);
-    });
-
-    // Moderator events
-    socket.on('participant-muted', () => {
-      if (!isMuted) {
-        toggleMute();
-      }
-    });
-
-    socket.on('participant-removed', () => {
-      alert('You have been removed from this meeting by the host.');
-      window.electronAPI.navigate('home');
-    });
-
-    // Chat listener
-    socket.on('chat-message', (data) => {
-      receiveMessage(data.userName, data.message, false);
-    });
-
-    // Reaction listener
-    socket.on('reaction', (data) => {
-      showFloatingEmoji(data.emoji);
-    });
-
-    // Hand raise listener
-    socket.on('hand-raised', (data) => {
-      // Toggle hand raise indicator on video tile
-      toggleHandIndicator(data.socketId, data.isRaised);
-    });
-
-    // Admission control (Host only)
-    if (isHost) {
-      socket.on('approval-request', (data) => {
-        showJoinRequest(data.socketId, data.userName);
-      });
+    switch (type) {
+      case 'join':
+        console.log(`User joined: ${sender} (${data.userName})`);
+        handlePeerJoin(sender, data.userName);
+        break;
+      case 'offer':
+        console.log(`SDP offer received from: ${sender}`);
+        await handleOffer(sender, data.offer, data.userName);
+        break;
+      case 'answer':
+        console.log(`SDP answer received from: ${sender}`);
+        await handleAnswer(sender, data.answer);
+        break;
+      case 'ice-candidate':
+        console.log(`ICE candidate received from: ${sender}`);
+        await handleIceCandidate(sender, data.candidate);
+        break;
+      case 'chat-message':
+        receiveMessage(data.userName, data.message, false);
+        break;
+      case 'hand-raise':
+        toggleHandIndicator(sender, data.isRaised);
+        break;
+      case 'reaction':
+        showFloatingEmoji(data.emoji);
+        break;
+      case 'mute-participant':
+        if (!isMuted) {
+          toggleMute();
+        }
+        break;
+      case 'remove-participant':
+        alert('You have been removed from this meeting by the host.');
+        window.electronAPI.navigate('home');
+        break;
+      case 'leave':
+        console.log(`User left: ${sender}`);
+        removePeerConnection(sender);
+        break;
     }
-
-    socket.on('waiting-approval', () => {
-      console.log('Waiting in lobby...');
-    });
-
-    socket.on('admitted', async () => {
-      console.log('Admitted to the meeting room!');
-    });
-  };
+  });
 }
 
 // ── WebRTC Signal Handlers ────────────────────────────────────
@@ -360,10 +335,14 @@ function handlePeerJoin(peerSocketId, peerName) {
   pc.createOffer().then(offer => {
     return pc.setLocalDescription(offer);
   }).then(() => {
-    socket.emit('offer', {
-      targetId: peerSocketId,
-      offer: pc.localDescription,
-      userName: currentUser.name
+    window.electronAPI.sendSignal(meetingId, {
+      type: 'offer',
+      target: peerSocketId,
+      sender: currentUser.email || 'guest',
+      data: {
+        offer: pc.localDescription,
+        userName: currentUser.name
+      }
     });
   });
 }
@@ -373,9 +352,13 @@ function createPeerConnection(peerSocketId, peerName) {
 
   pc.onicecandidate = (event) => {
     if (event.candidate) {
-      socket.emit('ice-candidate', {
-        targetId: peerSocketId,
-        candidate: event.candidate
+      window.electronAPI.sendSignal(meetingId, {
+        type: 'ice-candidate',
+        target: peerSocketId,
+        sender: currentUser.email || 'guest',
+        data: {
+          candidate: event.candidate
+        }
       });
     }
   };
@@ -400,9 +383,13 @@ async function handleOffer(senderId, offer, senderName) {
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
 
-  socket.emit('answer', {
-    targetId: senderId,
-    answer: answer
+  window.electronAPI.sendSignal(meetingId, {
+    type: 'answer',
+    target: senderId,
+    sender: currentUser.email || 'guest',
+    data: {
+      answer: answer
+    }
   });
 }
 
@@ -514,9 +501,11 @@ function toggleMute() {
     $('btn-mic').classList.remove('danger-active');
   }
 
-  if (socket) {
-    socket.emit('toggle-audio', { isMuted });
-  }
+  window.electronAPI.sendSignal(meetingId, {
+    type: 'toggle-audio',
+    sender: currentUser.email || 'guest',
+    data: { isMuted }
+  });
 }
 
 function toggleCam() {
@@ -559,9 +548,11 @@ function toggleCam() {
     }
   }
 
-  if (socket) {
-    socket.emit('toggle-video', { isCamOff });
-  }
+  window.electronAPI.sendSignal(meetingId, {
+    type: 'toggle-video',
+    sender: currentUser.email || 'guest',
+    data: { isCamOff }
+  });
 }
 
 // ── Screen Sharing (1080p Ultra-Smooth Quality) ────────────────
@@ -666,9 +657,11 @@ function toggleHandRaise() {
   $('btn-hand').classList.toggle('active', handRaised);
   toggleHandIndicator('local', handRaised);
   
-  if (socket) {
-    socket.emit('hand-raise', { isRaised: handRaised });
-  }
+  window.electronAPI.sendSignal(meetingId, {
+    type: 'hand-raise',
+    sender: currentUser.email || 'guest',
+    data: { isRaised: handRaised }
+  });
 }
 
 function toggleHandIndicator(peerId, isRaised) {
@@ -686,9 +679,11 @@ function toggleReactionsPopup() {
 
 function sendEmoji(emoji) {
   showFloatingEmoji(emoji);
-  if (socket) {
-    socket.emit('reaction', { emoji });
-  }
+  window.electronAPI.sendSignal(meetingId, {
+    type: 'reaction',
+    sender: currentUser.email || 'guest',
+    data: { emoji }
+  });
   $('reaction-selector-popup').style.display = 'none';
 }
 
@@ -845,7 +840,13 @@ function updateParticipantsList() {
   if (isHost) {
     $('host-controls-footer').style.display = 'block';
     $('btn-mute-all').onclick = () => {
-      socket.emit('mute-all', { roomId: meetingId });
+      peerConnections.forEach((pc, email) => {
+        window.electronAPI.sendSignal(meetingId, {
+          type: 'mute-participant',
+          target: email,
+          sender: currentUser.email || 'guest'
+        });
+      });
     };
   }
 }
@@ -871,11 +872,19 @@ function addParticipantUIItem(socketId, name, isSelf) {
   // Hook mod control events
   if (!isSelf && isHost) {
     div.querySelector('.mute-p-btn').onclick = () => {
-      socket.emit('mute-participant', { targetId: socketId });
+      window.electronAPI.sendSignal(meetingId, {
+        type: 'mute-participant',
+        target: socketId,
+        sender: currentUser.email || 'guest'
+      });
     };
     div.querySelector('.remove-p-btn').onclick = () => {
       if (confirm(`Remove ${name} from this meeting?`)) {
-        socket.emit('remove-participant', { targetId: socketId });
+        window.electronAPI.sendSignal(meetingId, {
+          type: 'remove-participant',
+          target: socketId,
+          sender: currentUser.email || 'guest'
+        });
       }
     };
   }
