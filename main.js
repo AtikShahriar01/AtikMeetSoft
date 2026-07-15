@@ -12,7 +12,6 @@ app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('disable-software-rasterizer');
 
 let mainWindow = null;
-let signalingServer = null;
 let currentUser = null;
 let db = null;
 let isLocalhost = true; // Default admin mode for host
@@ -103,7 +102,6 @@ function initDatabase() {
 // ─── Start Signaling Server & HTTP Static Web Server ───
 function initSignalingServer() {
   try {
-    const { startSignalingServer } = require('./src/utils/signaling');
     
     const server = http.createServer(async (req, res) => {
       const parsedUrl = url.parse(req.url, true);
@@ -288,9 +286,8 @@ function initSignalingServer() {
       });
     });
 
-    signalingServer = startSignalingServer(server);
     server.listen(SIGNALING_PORT, () => {
-      console.log(`Signaling server & Web Server running on port ${SIGNALING_PORT}`);
+      console.log(`HTTP Static Web Server running on port ${SIGNALING_PORT}`);
     });
   } catch (err) {
     console.error('Signaling server error:', err);
@@ -690,27 +687,17 @@ ipcMain.handle('auto-login-admin', async () => {
                   fs.existsSync('E:\\google meet\\main.js') || 
                   fs.existsSync('D:\\google meet\\main.js') ||
                   fs.existsSync('C:\\google meet\\main.js');
-  if (isDevPC) {
+  if (db) {
     try {
-      console.log('Developer PC detected. Auto-logging in to Render Central Server...');
-      const res = await forwardToCentralServer('login', { email: 'admin@atikmeet.com', password: 'atikadmin2026' });
-      console.log('[DEBUG] forwardToCentralServer response:', res);
-      if (res.success && res.user) {
-        currentUser = res.user.user || res.user;
-        console.log('[DEBUG] currentUser set from Render server:', currentUser.email);
-        return { success: true, user: currentUser };
+      const users = await db.getAllUsers();
+      const admin = users.find(u => u.isAdmin);
+      if (admin) {
+        currentUser = admin;
+        console.log('[DEBUG] currentUser set from Cloud Firestore:', currentUser.email);
+        return { success: true, user: { ...admin, password: undefined } };
       }
     } catch (err) {
-      console.error('Auto-login to Central Server failed:', err.message);
-    }
-  }
-  
-  if (isLocalhost && db) {
-    const admin = db.getAllUsers().find(u => u.isAdmin);
-    if (admin) {
-      currentUser = admin;
-      console.log('[DEBUG] currentUser set from local db:', currentUser.email);
-      return { success: true, user: { ...admin, password: undefined } };
+      console.error('[DEBUG] auto-login-admin error:', err.message);
     }
   }
   console.log('[DEBUG] auto-login-admin failed entirely');
