@@ -694,13 +694,19 @@ ipcMain.handle('get-current-user', () => {
 
 ipcMain.handle('is-localhost', () => {
   const fs = require('fs');
-  const isDevPC = !app.isPackaged || fs.existsSync('E:\\google meet\\main.js');
+  const isDevPC = !app.isPackaged || 
+                  fs.existsSync('E:\\google meet\\main.js') || 
+                  fs.existsSync('D:\\google meet\\main.js') ||
+                  fs.existsSync('C:\\google meet\\main.js');
   return isLocalhost || isDevPC;
 });
 
 ipcMain.handle('auto-login-admin', async () => {
   const fs = require('fs');
-  const isDevPC = !app.isPackaged || fs.existsSync('E:\\google meet\\main.js');
+  const isDevPC = !app.isPackaged || 
+                  fs.existsSync('E:\\google meet\\main.js') || 
+                  fs.existsSync('D:\\google meet\\main.js') ||
+                  fs.existsSync('C:\\google meet\\main.js');
   if (isDevPC) {
     try {
       console.log('Developer PC detected. Auto-logging in to Render Central Server...');
