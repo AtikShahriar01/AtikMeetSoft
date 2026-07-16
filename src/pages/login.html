@@ -135,11 +135,16 @@
         </div>
         
         <!-- Beautiful Math Captcha -->
-        <div class="captcha-container" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+        <div class="captcha-container" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative;">
           <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; font-weight: 600; color: #00d4aa;">Security Captcha Verification</label>
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <span id="captcha-question" style="font-size: 1.1rem; font-weight: bold; letter-spacing: 2px; color: #fff;">5 + 3 = ?</span>
-            <input type="number" id="captcha-answer" placeholder="Your answer" required style="width: 120px; padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; text-align: center;">
+          <div style="display: flex; align-items: center; gap: 12px; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span id="captcha-question" style="font-size: 1.1rem; font-weight: bold; letter-spacing: 2px; color: #fff;">5 + 3 = ?</span>
+              <input type="number" id="captcha-answer" placeholder="Your answer" required style="width: 120px; padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; text-align: center;">
+            </div>
+            <button type="button" id="btn-refresh-captcha" style="background: none; border: none; color: #00d4aa; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px; transition: transform 0.3s ease; border-radius: 50%;" title="Refresh Captcha">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            </button>
           </div>
         </div>
 

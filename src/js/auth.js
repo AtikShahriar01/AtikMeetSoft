@@ -150,6 +150,18 @@ function initAuthListeners() {
     modalSignupForm.addEventListener('submit', handleModalSignup);
   }
 
+  // Captcha refresh action
+  const btnRefresh = $('btn-refresh-captcha');
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', () => {
+      btnRefresh.style.transform = 'rotate(360deg)';
+      setTimeout(() => {
+        btnRefresh.style.transform = 'rotate(0deg)';
+      }, 300);
+      generateCaptcha();
+    });
+  }
+
   // Password visibility toggles
   const passwordToggles = document.querySelectorAll('.password-toggle');
   passwordToggles.forEach((toggle) => {
