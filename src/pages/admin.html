@@ -6,6 +6,12 @@
   <title>AtikMeet - Admin Dashboard</title>
   <link rel="stylesheet" href="../css/global.css">
   <link rel="stylesheet" href="../css/admin.css">
+  <style>
+    @keyframes slideInRight {
+      from { transform: translateX(40px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
 </head>
 <body>
   <!-- Custom titlebar -->
@@ -48,7 +54,7 @@
           <span>Dashboard</span>
         </a>
         <a href="#" class="nav-item" id="tab-meetings">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
           <span>Meetings</span>
         </a>
         <a href="#" class="nav-item" id="tab-users-nav">
@@ -76,7 +82,7 @@
       <header class="top-nav-bar">
         <div class="search-box-container">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a0a0b5" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="admin-global-search" placeholder="Search...">
+          <input type="text" id="admin-global-search" placeholder="Search users...">
         </div>
         <div class="header-right-actions">
           <button class="header-icon-btn" title="Checklist"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
@@ -94,228 +100,346 @@
         </div>
       </header>
 
-      <!-- Stats Cards Row (Screenshot 1 Style) -->
-      <div class="stats-row">
-        <!-- Card 1: Active Meetings (Cyan Neon) -->
-        <div class="stat-card neon-card cyan-glow">
-          <div class="stat-card-top">
-            <div class="stat-icon-wrapper cyan">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00d4aa" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      <!-- ═══ SECTION: DASHBOARD (tab-users) ═══ -->
+      <div id="section-dashboard">
+        <!-- Stats Cards Row -->
+        <div class="stats-row">
+          <!-- Card 1: Active Meetings (Cyan Neon) -->
+          <div class="stat-card neon-card cyan-glow">
+            <div class="stat-card-top">
+              <div class="stat-icon-wrapper cyan">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00d4aa" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              </div>
+              <span class="stat-label">ACTIVE MEETINGS</span>
             </div>
-            <span class="stat-label">ACTIVE MEETINGS</span>
-          </div>
-          <div class="stat-card-bottom">
-            <div class="stat-value-group">
-              <span class="stat-number" id="stats-live-meetings">148</span>
-              <span class="stat-trend positive">+5.2%</span>
-            </div>
-            <!-- Mini Cyan Sparkline Wave -->
-            <div class="sparkline-container">
-              <svg viewBox="0 0 100 30" class="sparkline-svg">
-                <path d="M 0 25 Q 25 5, 50 20 T 100 8" fill="none" stroke="#00d4aa" stroke-width="2.5"/>
-              </svg>
-            </div>
-          </div>
-          <span class="stat-subtext">Currently live</span>
-        </div>
-
-        <!-- Card 2: Total Registered Users (Purple Neon) -->
-        <div class="stat-card neon-card purple-glow">
-          <div class="stat-card-top">
-            <div class="stat-icon-wrapper purple">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <span class="stat-label">TOTAL REGISTERED USERS</span>
-          </div>
-          <div class="stat-card-bottom">
-            <div class="stat-value-group">
-              <span class="stat-number" id="stats-total-users">12,450</span>
-              <span class="stat-trend positive">+8.9%</span>
-            </div>
-            <!-- Mini Purple Sparkline Wave -->
-            <div class="sparkline-container">
-              <svg viewBox="0 0 100 30" class="sparkline-svg">
-                <path d="M 0 22 Q 30 28, 60 12 T 100 5" fill="none" stroke="#a855f7" stroke-width="2.5"/>
-              </svg>
-            </div>
-          </div>
-          <span class="stat-subtext">Active community</span>
-        </div>
-
-        <!-- Card 3: Active Licenses (Blue Neon) -->
-        <div class="stat-card neon-card blue-glow">
-          <div class="stat-card-top">
-            <div class="stat-icon-wrapper blue">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-            </div>
-            <span class="stat-label">ACTIVE LICENSES</span>
-          </div>
-          <div class="stat-card-bottom">
-            <div class="stat-value-group">
-              <span class="stat-number" id="stats-active-keys">8,915</span>
-              <span class="stat-trend positive">+3.1%</span>
-            </div>
-            <!-- Mini Blue Sparkline Wave -->
-            <div class="sparkline-container">
-              <svg viewBox="0 0 100 30" class="sparkline-svg">
-                <path d="M 0 25 Q 35 15, 65 22 T 100 6" fill="none" stroke="#3b82f6" stroke-width="2.5"/>
-              </svg>
-            </div>
-          </div>
-          <span class="stat-subtext">Valid subscriptions</span>
-        </div>
-      </div>
-
-      <!-- Main Two-Column Layout (Screenshot 1 Grid) -->
-      <div class="admin-main-grid">
-        <!-- Left Column: User Management Table -->
-        <div class="grid-left-col">
-          <section class="card-box user-management-card">
-            <div class="card-header-flex">
-              <h2>USER MANAGEMENT</h2>
-            </div>
-
-            <div class="table-container">
-              <table class="custom-admin-table">
-                <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Ban Status</th>
-                    <th>Registered</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="user-table-body">
-                  <tr>
-                    <td colspan="7" class="loading-users">Loading system users...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </div>
-
-        <!-- Right Column: License Key Generator -->
-        <div class="grid-right-col">
-          <div class="card-box key-generator-card">
-            <h2>LICENSE KEY GENERATOR</h2>
-            <div class="form-group" style="margin-top: 15px;">
-              <label style="color: #a0a0b5; font-size: 0.8rem; margin-bottom: 6px; display: block;">Activation Key</label>
-              <div class="key-output-wrapper">
-                <input type="text" id="generated-key-output" readonly value="AM-X9R2-T5K7-4B2L-W1S6">
+            <div class="stat-card-bottom">
+              <div class="stat-value-group">
+                <span class="stat-number" id="stats-live-meetings">0</span>
+                <span class="stat-trend positive">Live</span>
+              </div>
+              <div class="sparkline-container">
+                <svg viewBox="0 0 100 30" class="sparkline-svg">
+                  <path d="M 0 25 Q 25 5, 50 20 T 100 8" fill="none" stroke="#00d4aa" stroke-width="2.5"/>
+                </svg>
               </div>
             </div>
-
-            <div class="generator-actions-row">
-              <select id="key-duration-select" class="admin-select">
-                <option value="lifetime">Lifetime VIP</option>
-                <option value="30">30 Days VIP</option>
-                <option value="365">365 Days VIP</option>
-              </select>
-              <button class="btn btn-primary btn-glow" id="btn-generate-key">Generate New Key</button>
-              <button class="btn btn-secondary copy-btn" id="btn-copy-gen-key"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button>
-            </div>
-
-            <p class="key-expiry-info" id="key-expiry-info">Key: Trial 30 Days | Expires: 15 Oct 2026</p>
-
-            <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px;">
-              <button class="btn btn-secondary btn-sm btn-block" id="btn-export-keys">Export Unused Keys (.txt)</button>
-            </div>
+            <span class="stat-subtext">Currently live</span>
           </div>
 
-          <!-- Global Settings Widget -->
-          <div class="card-box settings-card" style="margin-top: 20px;">
-            <h2>GLOBAL SYSTEM SETTINGS</h2>
-            <div class="settings-form" style="margin-top: 15px;">
-              <div class="form-group-toggle">
-                <label for="maintenance-mode-toggle">
-                  <strong style="color: #fff; font-size: 0.85rem;">Maintenance Mode</strong>
-                  <span style="color: #a0a0b5; font-size: 0.75rem;">Block non-admins from system</span>
-                </label>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="maintenance-mode-toggle">
-                  <span class="slider"></span>
-                </label>
+          <!-- Card 2: Total Registered Users (Purple Neon) -->
+          <div class="stat-card neon-card purple-glow">
+            <div class="stat-card-top">
+              <div class="stat-icon-wrapper purple">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
+              <span class="stat-label">TOTAL REGISTERED USERS</span>
+            </div>
+            <div class="stat-card-bottom">
+              <div class="stat-value-group">
+                <span class="stat-number" id="stats-total-users">0</span>
+                <span class="stat-trend positive">Members</span>
+              </div>
+              <div class="sparkline-container">
+                <svg viewBox="0 0 100 30" class="sparkline-svg">
+                  <path d="M 0 22 Q 30 28, 60 12 T 100 5" fill="none" stroke="#a855f7" stroke-width="2.5"/>
+                </svg>
+              </div>
+            </div>
+            <span class="stat-subtext">Active community</span>
+          </div>
 
-              <div class="form-row" style="display: flex; gap: 15px; margin-top: 12px;">
-                <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
-                  <label for="max-participants-input" style="color: #a0a0b5; font-size: 0.78rem;">Max Room Participants</label>
-                  <input type="number" id="max-participants-input" min="5" max="500" value="150" style="background: #1a1f33; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 0.8rem; outline: none;">
-                </div>
-                <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
-                  <label for="trial-days-input" style="color: #a0a0b5; font-size: 0.78rem;">Free Trial Days</label>
-                  <input type="number" id="trial-days-input" min="1" max="90" value="7" style="background: #1a1f33; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 0.8rem; outline: none;">
+          <!-- Card 3: Active Licenses (Blue Neon) -->
+          <div class="stat-card neon-card blue-glow">
+            <div class="stat-card-top">
+              <div class="stat-icon-wrapper blue">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+              </div>
+              <span class="stat-label">ACTIVE LICENSES</span>
+            </div>
+            <div class="stat-card-bottom">
+              <div class="stat-value-group">
+                <span class="stat-number" id="stats-active-keys">0</span>
+                <span class="stat-trend positive">VIP</span>
+              </div>
+              <div class="sparkline-container">
+                <svg viewBox="0 0 100 30" class="sparkline-svg">
+                  <path d="M 0 25 Q 35 15, 65 22 T 100 6" fill="none" stroke="#3b82f6" stroke-width="2.5"/>
+                </svg>
+              </div>
+            </div>
+            <span class="stat-subtext">Valid subscriptions</span>
+          </div>
+        </div>
+
+        <!-- License Key Generator Card (on Dashboard) -->
+        <div class="admin-main-grid">
+          <div class="grid-left-col">
+            <div class="card-box key-generator-card">
+              <h2>LICENSE KEY GENERATOR</h2>
+              <div class="form-group" style="margin-top: 15px;">
+                <label style="color: #a0a0b5; font-size: 0.8rem; margin-bottom: 6px; display: block;">Activation Key</label>
+                <div class="key-output-wrapper">
+                  <input type="text" id="generated-key-output" readonly value="AM-X9R2-T5K7-4B2L-W1S6">
                 </div>
               </div>
 
-              <button class="btn btn-success btn-sm btn-block" id="btn-save-settings" style="margin-top: 15px; background: #10b981; color: #fff; border: none; border-radius: 6px; padding: 8px; font-weight: 600; cursor: pointer; width: 100%;">Save Configurations</button>
+              <div class="generator-actions-row">
+                <select id="key-duration-select" class="admin-select">
+                  <option value="lifetime">Lifetime VIP</option>
+                  <option value="30">30 Days VIP</option>
+                  <option value="365">365 Days VIP</option>
+                </select>
+                <button class="btn btn-primary btn-glow" id="btn-generate-key">Generate New Key</button>
+                <button class="btn btn-secondary copy-btn" id="btn-copy-gen-key"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button>
+              </div>
+
+              <p class="key-expiry-info" id="key-expiry-info">Select duration and click Generate</p>
+
+              <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px;">
+                <button class="btn btn-secondary btn-sm btn-block" id="btn-export-keys">Export Unused Keys (.txt)</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-right-col">
+            <!-- Global Settings Widget on Dashboard -->
+            <div class="card-box settings-card">
+              <h2>QUICK SETTINGS</h2>
+              <div class="settings-form" style="margin-top: 15px;">
+                <div class="form-group-toggle">
+                  <label for="maintenance-mode-toggle">
+                    <strong style="color: #fff; font-size: 0.85rem;">Maintenance Mode</strong>
+                    <span style="color: #a0a0b5; font-size: 0.75rem;">Block non-admins from system</span>
+                  </label>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="maintenance-mode-toggle">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="form-row" style="display: flex; gap: 15px; margin-top: 12px;">
+                  <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <label for="max-participants-input" style="color: #a0a0b5; font-size: 0.78rem;">Max Room Participants</label>
+                    <input type="number" id="max-participants-input" min="5" max="500" value="150" style="background: #1a1f33; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 0.8rem; outline: none;">
+                  </div>
+                  <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <label for="trial-days-input" style="color: #a0a0b5; font-size: 0.78rem;">Free Trial Days</label>
+                    <input type="number" id="trial-days-input" min="1" max="90" value="7" style="background: #1a1f33; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 0.8rem; outline: none;">
+                  </div>
+                </div>
+
+                <button class="btn btn-success btn-sm btn-block" id="btn-save-settings" style="margin-top: 15px; background: #10b981; color: #fff; border: none; border-radius: 6px; padding: 8px; font-weight: 600; cursor: pointer; width: 100%;">Save Configurations</button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Pending License Requests Section -->
-      <section class="user-table-section pending-requests-section" id="requests-section" style="display: none; margin-top: 30px;">
-        <div class="section-header-row">
-          <h2>Pending License Key Approvals</h2>
-        </div>
-        <div class="table-wrapper glass-card">
-          <table class="custom-admin-table">
-            <thead>
-              <tr>
-                <th>User Details</th>
-                <th>Requested Key</th>
-                <th>Access Duration Option</th>
-                <th>Control Actions</th>
-              </tr>
-            </thead>
-            <tbody id="requests-table-body">
-              <tr>
-                <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 25px;">No pending license requests.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <!-- ═══ SECTION: MEETINGS (tab-meetings) ═══ -->
+      <div id="section-meetings" style="display: none;">
+        <section class="user-table-section active-meetings-section" style="margin-top: 10px;">
+          <div class="section-header-row">
+            <h2>Live Active Meetings Monitor</h2>
+            <span class="live-pulse-indicator"><span class="pulse-dot"></span> Live Polling</span>
+          </div>
+          <div class="table-wrapper glass-card">
+            <table class="custom-admin-table">
+              <thead>
+                <tr>
+                  <th>Meeting Room ID</th>
+                  <th>Host Details</th>
+                  <th>Started At</th>
+                  <th>Participants Count</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="active-meetings-table-body">
+                <tr>
+                  <td colspan="5" class="loading-users">No active meetings online currently...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
 
-      <!-- Active Meetings Monitor Section -->
-      <section class="user-table-section active-meetings-section" style="margin-top: 30px;">
-        <div class="section-header-row">
-          <h2>Live Active Meetings Monitor</h2>
-          <span class="live-pulse-indicator"><span class="pulse-dot"></span> Live Polling</span>
+      <!-- ═══ SECTION: USERS (tab-users-nav) ═══ -->
+      <div id="section-users" style="display: none;">
+        <section class="card-box user-management-card" style="margin-top: 10px;">
+          <div class="card-header-flex">
+            <h2>USER MANAGEMENT</h2>
+            <div style="position: relative; display: inline-block;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a0a0b5" stroke-width="2" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="user-search-input" placeholder="Search users..." style="padding: 6px 10px 6px 32px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; font-size: 0.8rem; outline: none; width: 200px;">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="custom-admin-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Ban Status</th>
+                  <th>Registered</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="user-table-body">
+                <tr>
+                  <td colspan="7" class="loading-users">Loading system users...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- ═══ SECTION: LICENSE REQUESTS (tab-requests) ═══ -->
+      <div id="section-requests" style="display: none;">
+        <section class="user-table-section pending-requests-section" style="margin-top: 10px;">
+          <div class="section-header-row">
+            <h2>Pending License Key Approvals</h2>
+          </div>
+          <div class="table-wrapper glass-card">
+            <table class="custom-admin-table">
+              <thead>
+                <tr>
+                  <th>User Details</th>
+                  <th>Requested Key</th>
+                  <th>Access Duration Option</th>
+                  <th>Control Actions</th>
+                </tr>
+              </thead>
+              <tbody id="requests-table-body">
+                <tr>
+                  <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 25px;">No pending license requests.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- ═══ SECTION: SETTINGS (tab-settings) ═══ -->
+      <div id="section-settings" style="display: none;">
+        <div class="card-box settings-card" style="margin-top: 10px;">
+          <h2>GLOBAL SYSTEM SETTINGS</h2>
+          <div class="settings-form" style="margin-top: 15px;">
+            <div class="form-group-toggle">
+              <label for="maintenance-mode-toggle-settings">
+                <strong style="color: #fff; font-size: 0.85rem;">Maintenance Mode</strong>
+                <span style="color: #a0a0b5; font-size: 0.75rem;">Block non-admins from system</span>
+              </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="maintenance-mode-toggle-settings">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="form-row" style="display: flex; gap: 15px; margin-top: 12px;">
+              <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                <label for="max-participants-input-settings" style="color: #a0a0b5; font-size: 0.78rem;">Max Room Participants</label>
+                <input type="number" id="max-participants-input-settings" min="5" max="500" value="150" style="background: #1a1f33; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 0.8rem; outline: none;">
+              </div>
+              <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                <label for="trial-days-input-settings" style="color: #a0a0b5; font-size: 0.78rem;">Free Trial Days</label>
+                <input type="number" id="trial-days-input-settings" min="1" max="90" value="7" style="background: #1a1f33; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 0.8rem; outline: none;">
+              </div>
+            </div>
+
+            <div style="margin-top: 20px; display: grid; gap: 12px;">
+              <button class="btn btn-success btn-sm btn-block" id="btn-save-settings-full" style="background: #10b981; color: #fff; border: none; border-radius: 6px; padding: 10px; font-weight: 600; cursor: pointer; width: 100%; font-size: 0.9rem;">💾 Save All Configurations</button>
+              <button class="btn btn-secondary btn-sm btn-block" id="btn-export-keys-settings" style="border-radius: 6px; padding: 10px; font-weight: 600; cursor: pointer; width: 100%; font-size: 0.9rem;">📤 Export Unused License Keys (.txt)</button>
+            </div>
+          </div>
         </div>
-        <div class="table-wrapper glass-card">
-          <table class="custom-admin-table">
-            <thead>
-              <tr>
-                <th>Meeting Room ID</th>
-                <th>Host Details</th>
-                <th>Started At</th>
-                <th>Participants Count</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="active-meetings-table-body">
-              <tr>
-                <td colspan="5" class="loading-users">No active meetings online currently...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+      </div>
+
     </main>
+  </div>
+
+  <!-- Admin Notification Popup Modal -->
+  <div id="notification-modal" class="custom-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center;">
+    <div class="modal-card" style="background: #131726; border: 1px solid rgba(0,212,170,0.4); border-radius: 12px; padding: 20px; width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); color: #fff;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 15px;">
+        <h3 style="margin: 0; font-size: 1rem; color: #00d4aa; display: flex; align-items: center; gap: 8px;">🔔 Admin System Alerts</h3>
+        <button id="close-notification-modal" style="background: none; border: none; color: #a0a0b5; cursor: pointer; font-size: 1.2rem;">✕</button>
+      </div>
+      <div class="notification-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto;">
+        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-size: 0.82rem;">
+          <strong style="color: #00d4aa; display: block; margin-bottom: 2px;">Live System Monitor</strong>
+          <span>Admin service active. Live active room stats updated in real-time.</span>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-size: 0.82rem;">
+          <strong style="color: #a855f7; display: block; margin-bottom: 2px;">License Requests</strong>
+          <span>Pending VIP license key requests will be highlighted in red badge.</span>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-size: 0.82rem;">
+          <strong style="color: #3b82f6; display: block; margin-bottom: 2px;">Security Status</strong>
+          <span>All admin actions are logged with timestamps for audit trail.</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="../js/browser-fallback.js"></script>
   <script src="../js/admin.js"></script>
   <script>
-    document.getElementById('min-btn').addEventListener('click', () => window.electronAPI.minimize());
-    document.getElementById('close-btn').addEventListener('click', () => window.electronAPI.close());
-    document.getElementById('btn-dashboard').addEventListener('click', () => window.electronAPI.navigate('home'));
+    // Titlebar event handlers
+    const minBtn = document.getElementById('min-btn');
+    const closeBtn = document.getElementById('close-btn');
+
+    if (minBtn) minBtn.addEventListener('click', () => window.electronAPI.minimize());
+    if (closeBtn) closeBtn.addEventListener('click', () => window.electronAPI.close());
+
+    // Settings tab duplicate field sync
+    const syncSettings = () => {
+      const maint = document.getElementById('maintenance-mode-toggle');
+      const maintS = document.getElementById('maintenance-mode-toggle-settings');
+      const maxP = document.getElementById('max-participants-input');
+      const maxPS = document.getElementById('max-participants-input-settings');
+      const trial = document.getElementById('trial-days-input');
+      const trialS = document.getElementById('trial-days-input-settings');
+
+      if (maintS && maint) maintS.checked = maint.checked;
+      if (maxPS && maxP) maxPS.value = maxP.value;
+      if (trialS && trial) trialS.value = trial.value;
+    };
+
+    // Sync settings page save button
+    const saveFull = document.getElementById('btn-save-settings-full');
+    if (saveFull) {
+      saveFull.addEventListener('click', async () => {
+        const maintS = document.getElementById('maintenance-mode-toggle-settings');
+        const maxPS = document.getElementById('max-participants-input-settings');
+        const trialS = document.getElementById('trial-days-input-settings');
+
+        // Sync back to original IDs so admin.js handler works
+        const maint = document.getElementById('maintenance-mode-toggle');
+        const maxP = document.getElementById('max-participants-input');
+        const trial = document.getElementById('trial-days-input');
+
+        if (maint && maintS) maint.checked = maintS.checked;
+        if (maxP && maxPS) maxP.value = maxPS.value;
+        if (trial && trialS) trial.value = trialS.value;
+
+        // Trigger the main save
+        const btnSave = document.getElementById('btn-save-settings');
+        if (btnSave) btnSave.click();
+      });
+    }
+
+    // Export keys on settings tab
+    const exportSettingsBtn = document.getElementById('btn-export-keys-settings');
+    if (exportSettingsBtn) {
+      exportSettingsBtn.addEventListener('click', () => {
+        const btnExport = document.getElementById('btn-export-keys');
+        if (btnExport) btnExport.click();
+      });
+    }
   </script>
 </body>
 </html>

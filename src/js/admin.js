@@ -28,50 +28,66 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ── Verify Access ────────────────────────────────────────────
 async function verifyAdminAccess() {
-  const result = await window.electronAPI.getCurrentUser();
-  if (!result.success || !result.user.isAdmin) {
-    alert('Access Denied: You are not authorized to view the admin panel.');
-    window.electronAPI.navigate('home');
+  try {
+    const result = await window.electronAPI.getCurrentUser();
+    if (!result.success || !result.user.isAdmin) {
+      showAdminToast('Access Denied: You are not authorized to view the admin panel.', 'error');
+      window.electronAPI.navigate('home');
+    }
+  } catch(e) {
+    console.warn('[Admin] verifyAdminAccess error:', e);
   }
 }
 
 // ── Load Stats ───────────────────────────────────────────────
 async function loadAdminStats() {
-  const result = await window.electronAPI.getAdminStats();
-  if (result.success) {
-    const stats = result.stats;
-    if ($('stats-total-users')) $('stats-total-users').textContent = stats.totalUsers;
-    if ($('stats-active-keys')) $('stats-active-keys').textContent = stats.activeLicenses;
-    if ($('stats-vip-users')) $('stats-vip-users').textContent = stats.vipUsers;
-    if ($('stats-live-meetings')) $('stats-live-meetings').textContent = stats.activeMeetings;
+  try {
+    const result = await window.electronAPI.getAdminStats();
+    if (result.success) {
+      const stats = result.stats;
+      if ($('stats-total-users')) $('stats-total-users').textContent = stats.totalUsers;
+      if ($('stats-active-keys')) $('stats-active-keys').textContent = stats.activeLicenses;
+      if ($('stats-live-meetings')) $('stats-live-meetings').textContent = stats.activeMeetings;
+    }
+  } catch(e) {
+    console.warn('[Admin] loadAdminStats error:', e);
   }
 }
 
 // ── Load Global System Settings ────────────────────────────────
 async function loadSystemSettings() {
-  const result = await window.electronAPI.getSystemSettings();
-  if (result.success && result.settings) {
-    if ($('maintenance-mode-toggle')) $('maintenance-mode-toggle').checked = !!result.settings.maintenanceMode;
-    if ($('max-participants-input')) $('max-participants-input').value = result.settings.maxParticipants || 150;
-    if ($('trial-days-input')) $('trial-days-input').value = result.settings.trialDays || 7;
+  try {
+    const result = await window.electronAPI.getSystemSettings();
+    if (result.success && result.settings) {
+      if ($('maintenance-mode-toggle')) $('maintenance-mode-toggle').checked = !!result.settings.maintenanceMode;
+      if ($('max-participants-input')) $('max-participants-input').value = result.settings.maxParticipants || 150;
+      if ($('trial-days-input')) $('trial-days-input').value = result.settings.trialDays || 7;
+    }
+  } catch(e) {
+    console.warn('[Admin] loadSystemSettings error:', e);
   }
 }
 
 // ── Load Users database table ────────────────────────────────
 async function loadUsersList() {
-  const result = await window.electronAPI.getAllUsers();
-  const tbody = $('user-table-body');
-  
-  if (result.success && result.users) {
-    allUsers = result.users;
-    renderUserTable(allUsers);
-  } else {
-    tbody.innerHTML = '<tr><td colspan="6" class="loading-error">Error loading user list.</td></tr>';
+  try {
+    const result = await window.electronAPI.getAllUsers();
+    const tbody = $('user-table-body');
+
+    if (result.success && result.users) {
+      allUsers = result.users;
+      renderUserTable(allUsers);
+    } else {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="loading-error">Error loading user list.</td></tr>';
+    }
+  } catch(e) {
+    console.warn('[Admin] loadUsersList error:', e);
   }
 }
 
 function renderUserTable(usersList) {
   const tbody = $('user-table-body');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   if (usersList.length === 0) {
@@ -82,7 +98,7 @@ function renderUserTable(usersList) {
   usersList.forEach(user => {
     const isCurrentAdmin = (user.email === 'admin@atikmeet.com');
     const row = document.createElement('tr');
-    
+
     // Username with Avatar
     const firstChar = user.name ? user.name.charAt(0).toUpperCase() : 'U';
     const userCell = `
@@ -113,10 +129,10 @@ function renderUserTable(usersList) {
     if (isCurrentAdmin) {
       actionsHTML = `<span style="color:#60a5fa; font-weight:bold; font-size:0.75rem;">Root Master</span>`;
     } else {
-      const keyActionButton = user.licenseActivated ? 
-        `<button class="btn btn-warning btn-sm btn-deactivate" data-id="${user.id}">Revoke VIP</button>` : 
+      const keyActionButton = user.licenseActivated ?
+        `<button class="btn btn-warning btn-sm btn-deactivate" data-id="${user.id}">Revoke VIP</button>` :
         `<button class="btn btn-success btn-sm btn-activate" data-id="${user.id}">Grant VIP</button>`;
-        
+
       const banButtonText = user.isBanned ? 'Unban' : 'Ban';
       const banButtonClass = user.isBanned ? 'btn-success' : 'btn-warning';
 
@@ -144,37 +160,21 @@ function renderUserTable(usersList) {
 
 // ── Setup Action Handlers inside table ─────────────────────────
 function setupTableActionListeners() {
-  // Toggle password eye reveal
-  document.querySelectorAll('.reveal-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const userId = btn.getAttribute('data-id');
-      const maskEl = $(`pass-mask-${userId}`);
-      const plainEl = $(`pass-plain-${userId}`);
-
-      if (plainEl.style.display === 'none') {
-        plainEl.style.display = 'inline-block';
-        maskEl.style.display = 'none';
-        btn.textContent = '🔒';
-      } else {
-        plainEl.style.display = 'none';
-        maskEl.style.display = 'inline-block';
-        btn.textContent = '👁️';
-      }
-    });
-  });
-
   // Activate license direct key assignment with duration
   document.querySelectorAll('.btn-activate').forEach(btn => {
     btn.addEventListener('click', async () => {
       const userId = btn.getAttribute('data-id');
-      const durationDays = $('key-duration-select').value;
-      const result = await window.electronAPI.adminActivateLicense(userId, durationDays);
-      if (result.success) {
-        alert(`VIP license key successfully assigned and activated!\nKey: ${result.key}\nDuration: ${durationDays === 'lifetime' ? 'Lifetime' : durationDays + ' Days'}`);
-        await refreshDashboard();
-      } else {
-        alert('Activation error: ' + result.error);
-      }
+      const durationSelect = $('key-duration-select');
+      const durationDays = durationSelect ? durationSelect.value : 'lifetime';
+      try {
+        const result = await window.electronAPI.adminActivateLicense(userId, durationDays);
+        if (result.success) {
+          showAdminToast(`✅ VIP license assigned! Key: ${result.key}`);
+          await refreshDashboard();
+        } else {
+          showAdminToast('❌ Activation error: ' + result.error, 'error');
+        }
+      } catch(e) { showAdminToast('❌ Activation failed', 'error'); }
     });
   });
 
@@ -183,12 +183,15 @@ function setupTableActionListeners() {
     btn.addEventListener('click', async () => {
       const userId = btn.getAttribute('data-id');
       if (confirm('Revoke VIP license key for this user?')) {
-        const result = await window.electronAPI.adminDeactivateLicense(userId);
-        if (result.success) {
-          await refreshDashboard();
-        } else {
-          alert('Revocation error: ' + result.error);
-        }
+        try {
+          const result = await window.electronAPI.adminDeactivateLicense(userId);
+          if (result.success) {
+            showAdminToast('✅ VIP license revoked.');
+            await refreshDashboard();
+          } else {
+            showAdminToast('❌ Revocation error: ' + result.error, 'error');
+          }
+        } catch(e) { showAdminToast('❌ Revocation failed', 'error'); }
       }
     });
   });
@@ -198,14 +201,17 @@ function setupTableActionListeners() {
     btn.addEventListener('click', async () => {
       const userId = btn.getAttribute('data-id');
       const isCurrentlyBanned = btn.getAttribute('data-banned') === 'true';
-      const promptText = isCurrentlyBanned ? 'Unban this user account?' : 'Are you sure you want to BAN this user account from logging in?';
+      const promptText = isCurrentlyBanned ? 'Unban this user account?' : 'Are you sure you want to BAN this user?';
       if (confirm(promptText)) {
-        const result = await window.electronAPI.toggleUserBan(userId, !isCurrentlyBanned);
-        if (result.success) {
-          await refreshDashboard();
-        } else {
-          alert('Ban toggle error: ' + result.error);
-        }
+        try {
+          const result = await window.electronAPI.toggleUserBan(userId, !isCurrentlyBanned);
+          if (result.success) {
+            showAdminToast(isCurrentlyBanned ? '✅ User unbanned.' : '🚫 User banned.');
+            await refreshDashboard();
+          } else {
+            showAdminToast('❌ Ban toggle error: ' + result.error, 'error');
+          }
+        } catch(e) { showAdminToast('❌ Ban toggle failed', 'error'); }
       }
     });
   });
@@ -215,14 +221,17 @@ function setupTableActionListeners() {
     btn.addEventListener('click', async () => {
       const userId = btn.getAttribute('data-id');
       const isCurrentlyAdmin = btn.getAttribute('data-admin') === 'true';
-      const promptText = isCurrentlyAdmin ? 'Demote this user to a regular Member?' : 'Promote this user to an Administrator?';
+      const promptText = isCurrentlyAdmin ? 'Demote this user to regular Member?' : 'Promote this user to Administrator?';
       if (confirm(promptText)) {
-        const result = await window.electronAPI.toggleUserRole(userId, !isCurrentlyAdmin);
-        if (result.success) {
-          await refreshDashboard();
-        } else {
-          alert('Role update error: ' + result.error);
-        }
+        try {
+          const result = await window.electronAPI.toggleUserRole(userId, !isCurrentlyAdmin);
+          if (result.success) {
+            showAdminToast(isCurrentlyAdmin ? '✅ User demoted.' : '✅ User promoted to Admin.');
+            await refreshDashboard();
+          } else {
+            showAdminToast('❌ Role update error: ' + result.error, 'error');
+          }
+        } catch(e) { showAdminToast('❌ Role update failed', 'error'); }
       }
     });
   });
@@ -232,12 +241,15 @@ function setupTableActionListeners() {
     btn.addEventListener('click', async () => {
       const userId = btn.getAttribute('data-id');
       if (confirm('Are you sure you want to permanently delete this user account from the database?')) {
-        const result = await window.electronAPI.adminDeleteUser(userId);
-        if (result.success) {
-          await refreshDashboard();
-        } else {
-          alert('Deletion error: ' + result.error);
-        }
+        try {
+          const result = await window.electronAPI.adminDeleteUser(userId);
+          if (result.success) {
+            showAdminToast('✅ User deleted from database.');
+            await refreshDashboard();
+          } else {
+            showAdminToast('❌ Deletion error: ' + result.error, 'error');
+          }
+        } catch(e) { showAdminToast('❌ Deletion failed', 'error'); }
       }
     });
   });
@@ -245,128 +257,260 @@ function setupTableActionListeners() {
 
 // ── Live Active Meetings Monitor ──────────────────────────────
 async function loadActiveMeetings() {
-  const result = await window.electronAPI.getActiveMeetings();
-  const tbody = $('active-meetings-table-body');
-  
-  if (result.success && result.meetings) {
-    tbody.innerHTML = '';
-    if (result.meetings.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-row" style="text-align:center; color:var(--text-secondary); padding:20px;">No meetings are currently active on the server.</td></tr>';
-      return;
-    }
-    
-    result.meetings.forEach(meeting => {
-      const row = document.createElement('tr');
-      const startTimeFormatted = new Date(meeting.startedAt || meeting.createdAt).toLocaleTimeString('en-US', {
-        hour: '2-digit', minute: '2-digit', second: '2-digit'
-      });
-      const participantCount = meeting.participants ? meeting.participants.length : 0;
-      
-      row.innerHTML = `
-        <td><code style="color:var(--accent); font-weight:bold;">${meeting.id}</code></td>
-        <td><b>${meeting.hostName}</b></td>
-        <td>${startTimeFormatted}</td>
-        <td><span style="font-weight:bold; color:var(--primary-light);">${participantCount}</span> online</td>
-        <td>
-          <div style="display:flex; gap:6px;">
-            <button class="btn btn-warning btn-sm btn-force-end" data-id="${meeting.id}" style="padding: 4px 8px; font-size: 0.8rem; background: var(--warning); border-radius: 4px; border: none; color: #fff; cursor: pointer;">Force End</button>
-            <button class="btn btn-danger btn-sm btn-delete-meeting" data-id="${meeting.id}" style="padding: 4px 8px; font-size: 0.8rem; background: var(--danger); border-radius: 4px; border: none; color: #fff; cursor: pointer;">Delete</button>
-          </div>
-        </td>
-      `;
-      tbody.appendChild(row);
-    });
-    
-    // Attach listener for force ending meetings
-    document.querySelectorAll('.btn-force-end').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const meetingId = btn.getAttribute('data-id');
-        if (confirm(`Are you sure you want to force terminate meeting: ${meetingId}?`)) {
-          const res = await window.electronAPI.endMeeting(meetingId);
-          if (res.success) {
-            await loadActiveMeetings();
-            await loadAdminStats();
-          } else {
-            alert('Failed to end meeting: ' + res.error);
-          }
-        }
-      });
-    });
+  try {
+    const result = await window.electronAPI.getActiveMeetings();
+    const tbody = $('active-meetings-table-body');
+    if (!tbody) return;
 
-    // Attach listener for deleting meetings
-    document.querySelectorAll('.btn-delete-meeting').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const meetingId = btn.getAttribute('data-id');
-        if (confirm(`Are you sure you want to completely delete meeting: ${meetingId} from history and database?`)) {
-          const res = await window.electronAPI.deleteMeeting(meetingId);
-          if (res.success) {
-            await loadActiveMeetings();
-            await loadAdminStats();
-          } else {
-            alert('Failed to delete meeting: ' + res.error);
-          }
-        }
+    if (result.success && result.meetings) {
+      tbody.innerHTML = '';
+      if (result.meetings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-row" style="text-align:center; color:var(--text-secondary); padding:20px;">No meetings are currently active on the server.</td></tr>';
+        return;
+      }
+
+      result.meetings.forEach(meeting => {
+        const row = document.createElement('tr');
+        const startTimeFormatted = new Date(meeting.startedAt || meeting.createdAt).toLocaleTimeString('en-US', {
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+        const participantCount = meeting.participants ? meeting.participants.length : 0;
+
+        row.innerHTML = `
+          <td><code style="color:var(--accent); font-weight:bold;">${meeting.id}</code></td>
+          <td><b>${meeting.hostName}</b></td>
+          <td>${startTimeFormatted}</td>
+          <td><span style="font-weight:bold; color:var(--primary-light);">${participantCount}</span> online</td>
+          <td>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-warning btn-sm btn-force-end" data-id="${meeting.id}" style="padding: 4px 8px; font-size: 0.8rem; background: var(--warning); border-radius: 4px; border: none; color: #fff; cursor: pointer;">Force End</button>
+              <button class="btn btn-danger btn-sm btn-delete-meeting" data-id="${meeting.id}" style="padding: 4px 8px; font-size: 0.8rem; background: var(--danger); border-radius: 4px; border: none; color: #fff; cursor: pointer;">Delete</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
       });
-    });
+
+      // Attach listener for force ending meetings
+      document.querySelectorAll('.btn-force-end').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const meetingId = btn.getAttribute('data-id');
+          if (confirm(`Force terminate meeting: ${meetingId}?`)) {
+            try {
+              const res = await window.electronAPI.endMeeting(meetingId);
+              if (res.success) {
+                showAdminToast('✅ Meeting force ended.');
+                await loadActiveMeetings();
+                await loadAdminStats();
+              } else {
+                showAdminToast('❌ Failed to end meeting: ' + res.error, 'error');
+              }
+            } catch(e) { showAdminToast('❌ Failed to end meeting', 'error'); }
+          }
+        });
+      });
+
+      // Attach listener for deleting meetings
+      document.querySelectorAll('.btn-delete-meeting').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const meetingId = btn.getAttribute('data-id');
+          if (confirm(`Delete meeting ${meetingId} from history and database?`)) {
+            try {
+              const res = await window.electronAPI.deleteMeeting(meetingId);
+              if (res.success) {
+                showAdminToast('✅ Meeting deleted.');
+                await loadActiveMeetings();
+                await loadAdminStats();
+              } else {
+                showAdminToast('❌ Failed to delete meeting: ' + res.error, 'error');
+              }
+            } catch(e) { showAdminToast('❌ Failed to delete meeting', 'error'); }
+          }
+        });
+      });
+    }
+  } catch(e) {
+    console.warn('[Admin] loadActiveMeetings error:', e);
+  }
+}
+
+// ── Toast Notification System ──────────────────────────────────
+function showAdminToast(message, type = 'success') {
+  let toastContainer = $('admin-toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'admin-toast-container';
+    toastContainer.style.cssText = `
+      position: fixed; top: 70px; right: 20px; z-index: 99999;
+      display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+    `;
+    document.body.appendChild(toastContainer);
+  }
+
+  const toast = document.createElement('div');
+  const bgColor = type === 'error' ? 'rgba(239,68,68,0.95)' : 'rgba(16,185,129,0.95)';
+  toast.style.cssText = `
+    background: ${bgColor}; color: #fff; padding: 10px 16px; border-radius: 8px;
+    font-size: 0.85rem; font-weight: 500; pointer-events: all;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 320px;
+    animation: slideInRight 0.3s ease;
+    transition: opacity 0.3s ease;
+  `;
+  toast.textContent = message;
+  toastContainer.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+
+// ── Admin Tab Section Switcher ─────────────────────────────────
+const ADMIN_SECTIONS = {
+  'tab-users': 'section-dashboard',
+  'tab-meetings': 'section-meetings',
+  'tab-users-nav': 'section-users',
+  'tab-requests': 'section-requests',
+  'tab-settings': 'section-settings',
+};
+
+function switchAdminTab(tabId) {
+  // Remove active from all nav items
+  document.querySelectorAll('.admin-sidebar .nav-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  const tabEl = $(tabId);
+  if (tabEl) tabEl.classList.add('active');
+
+  // Show/hide sections
+  Object.values(ADMIN_SECTIONS).forEach(secId => {
+    const el = $(secId);
+    if (el) el.style.display = 'none';
+  });
+
+  const targetSecId = ADMIN_SECTIONS[tabId];
+  const targetEl = $(targetSecId);
+  if (targetEl) {
+    targetEl.style.display = '';
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
 // ── Main UI Event Listeners ──────────────────────────────────
 function setupEventListeners() {
   // Generate Key with selected duration
-  $('btn-generate-key').addEventListener('click', async () => {
-    const durationDays = $('key-duration-select').value;
-    const result = await window.electronAPI.generateLicenseKey(durationDays);
-    if (result.success) {
-      $('generated-key-output').value = result.key;
-    }
-  });
+  const btnGenerateKey = $('btn-generate-key');
+  if (btnGenerateKey) {
+    btnGenerateKey.addEventListener('click', async () => {
+      try {
+        const durationDays = $('key-duration-select') ? $('key-duration-select').value : 'lifetime';
+        const result = await window.electronAPI.generateLicenseKey(durationDays);
+        if (result.success) {
+          if ($('generated-key-output')) $('generated-key-output').value = result.key;
+          showAdminToast('✅ New license key generated!');
+        } else {
+          showAdminToast('❌ Key generation failed: ' + result.error, 'error');
+        }
+      } catch(e) {
+        showAdminToast('❌ Key generation error', 'error');
+      }
+    });
+  }
 
   // Copy Generated Key
-  $('btn-copy-gen-key').addEventListener('click', async () => {
-    const key = $('generated-key-output').value;
-    if (key) {
-      await window.electronAPI.copyToClipboard(key);
-      alert('Generated license key copied to clipboard!');
-    }
-  });
+  const btnCopyGenKey = $('btn-copy-gen-key');
+  if (btnCopyGenKey) {
+    btnCopyGenKey.addEventListener('click', async () => {
+      const keyEl = $('generated-key-output');
+      const key = keyEl ? keyEl.value : '';
+      if (key) {
+        try {
+          await window.electronAPI.copyToClipboard(key);
+          showAdminToast('✅ License key copied to clipboard!');
+        } catch(e) {
+          showAdminToast('❌ Copy failed', 'error');
+        }
+      } else {
+        showAdminToast('⚠️ No key to copy. Generate one first.', 'error');
+      }
+    });
+  }
 
   // Export Unused Keys
-  $('btn-export-keys').addEventListener('click', async () => {
-    const result = await window.electronAPI.exportLicenseKeys();
-    if (result.success) {
-      alert(`Successfully exported ${result.count} unused license keys!`);
-    } else {
-      if (result.error !== 'Export cancelled') {
-        alert('Export error: ' + result.error);
+  const btnExportKeys = $('btn-export-keys');
+  if (btnExportKeys) {
+    btnExportKeys.addEventListener('click', async () => {
+      try {
+        const result = await window.electronAPI.exportLicenseKeys();
+        if (result.success) {
+          showAdminToast(`✅ Exported ${result.count} unused license keys!`);
+        } else {
+          if (result.error !== 'Export cancelled') {
+            showAdminToast('❌ Export error: ' + result.error, 'error');
+          }
+        }
+      } catch(e) {
+        showAdminToast('❌ Export failed', 'error');
       }
-    }
-  });
+    });
+  }
 
   // Save System Settings Configurations
   const btnSaveSettings = $('btn-save-settings');
   if (btnSaveSettings) {
     btnSaveSettings.addEventListener('click', async () => {
-      const maintenanceMode = $('maintenance-mode-toggle') ? $('maintenance-mode-toggle').checked : false;
-      const maxParticipants = $('max-participants-input') ? (parseInt($('max-participants-input').value, 10) || 150) : 150;
-      const trialDays = $('trial-days-input') ? (parseInt($('trial-days-input').value, 10) || 7) : 7;
-      
-      const result = await window.electronAPI.updateSystemSettings({
-        maintenanceMode,
-        maxParticipants,
-        trialDays
-      });
-      
-      if (result.success) {
-        alert('Global configurations updated successfully!');
-        await refreshDashboard();
-      } else {
-        alert('Configuration save error: ' + result.error);
+      try {
+        const maintenanceMode = $('maintenance-mode-toggle') ? $('maintenance-mode-toggle').checked : false;
+        const maxParticipants = $('max-participants-input') ? (parseInt($('max-participants-input').value, 10) || 150) : 150;
+        const trialDays = $('trial-days-input') ? (parseInt($('trial-days-input').value, 10) || 7) : 7;
+
+        const result = await window.electronAPI.updateSystemSettings({
+          maintenanceMode,
+          maxParticipants,
+          trialDays
+        });
+
+        if (result.success) {
+          showAdminToast('✅ Global configurations saved successfully!');
+          await refreshDashboard();
+        } else {
+          showAdminToast('❌ Configuration save error: ' + result.error, 'error');
+        }
+      } catch(e) {
+        showAdminToast('❌ Settings save failed', 'error');
       }
     });
   }
 
-  // Live Search Filter (Both top search and table search)
+  // Admin Notification Modal Trigger
+  const notifModal = $('notification-modal');
+  const closeNotifBtn = $('close-notification-modal');
+
+  document.querySelectorAll('.header-icon-btn, .notification-btn').forEach(btn => {
+    if (btn.getAttribute('title') === 'Notifications' || btn.classList.contains('notification-btn')) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (notifModal) {
+          notifModal.style.display = 'flex';
+        }
+      });
+    }
+  });
+
+  if (closeNotifBtn) {
+    closeNotifBtn.addEventListener('click', () => {
+      if (notifModal) notifModal.style.display = 'none';
+    });
+  }
+
+  // Close modal on overlay click
+  if (notifModal) {
+    notifModal.addEventListener('click', (e) => {
+      if (e.target === notifModal) notifModal.style.display = 'none';
+    });
+  }
+
+  // Live Search Filter
   const setupSearch = (inputId) => {
     const el = $(inputId);
     if (!el) return;
@@ -393,45 +537,22 @@ function setupEventListeners() {
   setupSearch('user-search-input');
   setupSearch('admin-global-search');
 
-  // Sidebar Tab Switching
-  const switchTab = (activeTabId, showSectionClass) => {
-    document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => item.classList.remove('active'));
-    const tabEl = $(activeTabId);
-    if (tabEl) tabEl.classList.add('active');
-
-    // Show/hide sections
-    const usersSec = document.querySelector('.user-management-card');
-    const requestsSec = $('requests-section');
-    const meetingsSec = document.querySelector('.active-meetings-section');
-    const settingsSec = document.querySelector('.settings-card');
-
-    if (activeTabId === 'tab-requests') {
-      if (requestsSec) requestsSec.style.display = 'block';
-    } else {
-      if (requestsSec) requestsSec.style.display = 'none';
-    }
-
-    if (showSectionClass) {
-      const targetEl = document.querySelector(showSectionClass);
-      if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const bindTab = (id, targetClass) => {
-    const el = $(id);
+  // ── Sidebar Tab Navigation ─────────────────────────────────
+  const bindTab = (tabId) => {
+    const el = $(tabId);
     if (el) {
       el.addEventListener('click', (e) => {
         e.preventDefault();
-        switchTab(id, targetClass);
+        switchAdminTab(tabId);
       });
     }
   };
 
-  bindTab('tab-users', '.user-management-card');
-  bindTab('tab-users-nav', '.user-management-card');
-  bindTab('tab-meetings', '.active-meetings-section');
-  bindTab('tab-requests', '#requests-section');
-  bindTab('tab-settings', '.settings-card');
+  bindTab('tab-users');
+  bindTab('tab-users-nav');
+  bindTab('tab-meetings');
+  bindTab('tab-requests');
+  bindTab('tab-settings');
 
   // Go to Client App (Home page)
   const btnDashboard = $('btn-dashboard');
@@ -440,34 +561,44 @@ function setupEventListeners() {
       window.electronAPI.navigate('home');
     });
   }
+
+  // Initialize — show dashboard section by default
+  switchAdminTab('tab-users');
 }
 
 // ── Pending activations key requests ─────────────────────────
 let pendingRequests = [];
 
 async function loadPendingActivations() {
-  const result = await window.electronAPI.getPendingActivations();
-  const tbody = $('requests-table-body');
-  const countBadge = $('badge-requests-count');
+  try {
+    const result = await window.electronAPI.getPendingActivations();
+    const tbody = $('requests-table-body');
+    const countBadge = $('badge-requests-count');
 
-  if (result.success && result.list) {
-    pendingRequests = result.list;
-    
-    if (pendingRequests.length > 0) {
-      countBadge.textContent = pendingRequests.length;
-      countBadge.style.display = 'inline-block';
+    if (result.success && result.list) {
+      pendingRequests = result.list;
+
+      if (pendingRequests.length > 0) {
+        if (countBadge) {
+          countBadge.textContent = pendingRequests.length;
+          countBadge.style.display = 'inline-block';
+        }
+      } else {
+        if (countBadge) countBadge.style.display = 'none';
+      }
+
+      renderRequestsTable(pendingRequests);
     } else {
-      countBadge.style.display = 'none';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red; padding:20px;">Error loading requests.</td></tr>';
     }
-
-    renderRequestsTable(pendingRequests);
-  } else {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red; padding:20px;">Error loading requests.</td></tr>';
+  } catch(e) {
+    console.warn('[Admin] loadPendingActivations error:', e);
   }
 }
 
 function renderRequestsTable(list) {
   const tbody = $('requests-table-body');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   if (list.length === 0) {
@@ -513,16 +644,18 @@ function renderRequestsTable(list) {
       const email = btn.getAttribute('data-email');
       const row = btn.closest('tr');
       const select = row.querySelector('.duration-select');
-      const durationOption = select.value;
+      const durationOption = select ? select.value : 'lifetime';
 
       if (confirm(`Approve premium license request for ${email}?`)) {
-        const result = await window.electronAPI.approveLicenseActivation(email, durationOption);
-        if (result.success) {
-          alert('License approved successfully!');
-          await refreshDashboard();
-        } else {
-          alert('Error approving license: ' + result.error);
-        }
+        try {
+          const result = await window.electronAPI.approveLicenseActivation(email, durationOption);
+          if (result.success) {
+            showAdminToast('✅ License approved successfully!');
+            await refreshDashboard();
+          } else {
+            showAdminToast('❌ Error approving license: ' + result.error, 'error');
+          }
+        } catch(e) { showAdminToast('❌ Approval failed', 'error'); }
       }
     });
   });
@@ -532,13 +665,15 @@ function renderRequestsTable(list) {
     btn.addEventListener('click', async () => {
       const email = btn.getAttribute('data-email');
       if (confirm(`Reject pending license request for ${email}?`)) {
-        const result = await window.electronAPI.rejectLicenseActivation(email);
-        if (result.success) {
-          alert('Request rejected.');
-          await refreshDashboard();
-        } else {
-          alert('Error rejecting request: ' + result.error);
-        }
+        try {
+          const result = await window.electronAPI.rejectLicenseActivation(email);
+          if (result.success) {
+            showAdminToast('✅ Request rejected.');
+            await refreshDashboard();
+          } else {
+            showAdminToast('❌ Error rejecting request: ' + result.error, 'error');
+          }
+        } catch(e) { showAdminToast('❌ Rejection failed', 'error'); }
       }
     });
   });

@@ -16,6 +16,9 @@ let currentUser = null;
 let db = null;
 let isLocalhost = true; // Default admin mode for host
 
+// FIX 1: Signaling Server কে গ্লোবাল ভেরিয়েবল হিসেবে ডিক্লেয়ার করা হয়েছে
+let signalingServer = null;
+
 const CENTRAL_SERVER_IP = '192.168.0.101'; // Fallback LAN IP
 const SIGNALING_PORT = 3478;
 const CENTRAL_SERVER_URL = 'https://atikmeetsoft.onrender.com';
@@ -36,7 +39,7 @@ if (!gotTheLock) {
   });
 }
 
-// ─── Create Main Window ───
+// ─── Create Main Window ──
 function createWindow() {
   const iconPath = path.join(__dirname, 'assets', 'icon.png');
 
@@ -88,7 +91,7 @@ function createWindow() {
   });
 }
 
-// ─── Initialize Database ───
+// ─── Initialize Database ──
 function initDatabase() {
   try {
     db = require('./src/utils/db');
@@ -102,8 +105,8 @@ function initDatabase() {
 // ─── Start Signaling Server & HTTP Static Web Server ───
 function initSignalingServer() {
   try {
-    
-    const server = http.createServer(async (req, res) => {
+    // FIX 2: 'const server' এর বদলে গ্লোবাল 'signalingServer' ব্যবহার করা হয়েছে
+    signalingServer = http.createServer(async (req, res) => {
       const parsedUrl = url.parse(req.url, true);
       let pathname = parsedUrl.pathname;
 
@@ -143,7 +146,7 @@ function initSignalingServer() {
             if (channel === 'login') {
               const { email, password } = args[0] || {};
               result = await db.loginUser(email, password);
-            } 
+            }
             else if (channel === 'register') {
               const { name, email, password } = args[0] || {};
               result = await db.createUser({ name, email, password });
@@ -234,7 +237,7 @@ function initSignalingServer() {
       if (pathname === '/api/auto-login-local-admin') {
         const clientIp = req.socket.remoteAddress || '';
         const isLocalConnection = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.includes('::ffff:127.0.0.1') || clientIp.includes('localhost');
-        
+
         if (isLocalConnection && db) {
           const admin = (await db.getAllUsers()).find(u => u.isAdmin);
           if (admin) {
@@ -252,7 +255,7 @@ function initSignalingServer() {
       // Handle meeting join links: /meeting/atikmeet-xxxx-yyyy-zzzz
       if (pathname.startsWith('/meeting/')) {
         const filePath = path.join(__dirname, 'src', 'pages', 'meeting.html');
-        
+
         fs.readFile(filePath, 'utf8', (err, data) => {
           if (err) {
             res.writeHead(500);
@@ -267,12 +270,12 @@ function initSignalingServer() {
 
       // Serve static files from root directory of project
       let targetPath = path.join(__dirname, pathname);
-      
+
       // Map web server routes to the /src folder for CSS, JS, and HTML pages
       if (pathname.startsWith('/css/') || pathname.startsWith('/js/') || pathname.startsWith('/pages/')) {
         targetPath = path.join(__dirname, 'src', pathname);
       }
-      
+
       // Fallback index
       if (pathname === '/' || pathname === '') {
         targetPath = path.join(__dirname, 'src', 'pages', 'login.html');
@@ -307,7 +310,7 @@ function initSignalingServer() {
       });
     });
 
-    server.listen(SIGNALING_PORT, () => {
+    signalingServer.listen(SIGNALING_PORT, () => {
       console.log(`HTTP Static Web Server running on port ${SIGNALING_PORT}`);
     });
   } catch (err) {
@@ -343,12 +346,12 @@ app.whenReady().then(async () => {
 
   initDatabase();
   initSignalingServer();
-  
+
   createWindow();
-  
+
   // Set Display Media Request and Permission Handlers for Electron
   const { session, desktopCapturer } = require('electron');
-  
+
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     // Automatically approve all permissions inside the Electron desktop app
     callback(true);
@@ -378,15 +381,15 @@ app.whenReady().then(async () => {
     try {
       const adminExists = (await db.getAllUsers()).find(u => u.isAdmin);
       if (!adminExists) {
-        const result = await db.createUser({ 
-          name: 'Atik Shahriar', 
-          email: 'admin@atikmeet.com', 
-          password: 'atikadmin2026' 
+        const result = await db.createUser({
+          name: 'Atik Shahriar',
+          email: 'admin@atikmeet.com',
+          password: 'atikadmin2026'
         });
         if (result.success && result.user) {
-          await db.updateUser(result.user.email, { 
-            isAdmin: true, 
-            isVIP: true, 
+          await db.updateUser(result.user.email, {
+            isAdmin: true,
+            isVIP: true,
             licenseActivated: true,
             licenseKey: 'ATIK-ADMIN-VIP-2026'
           });
@@ -415,13 +418,43 @@ app.on('window-all-closed', () => {
   }
 });
 
+// FIX 3: Graceful Shutdown লজিক যোগ করা হয়েছে
+app.on('before-quit', async (event) => {
+  // 1. Signaling Server বন্ধ করা
+  if (signalingServer) {
+    await new Promise((resolve) => {
+      signalingServer.close(() => {
+        console.log('Signaling server closed.');
+        resolve();
+      });
+      // 5 সেকেন্ডের মধ্যে বন্ধ না হলে জোরপূর্বক বন্ধ
+      setTimeout(resolve, 5000);
+    });
+  }
+
+  // 2. সব সিগন্যালিং লিসেনার বন্ধ করা (Firestore)
+  if (typeof signalUnsubscribeMap !== 'undefined') {
+    signalUnsubscribeMap.forEach((unsubscribe) => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    });
+    signalUnsubscribeMap.clear();
+  }
+
+  // 3. উইন্ডো ধ্বংস করা
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.destroy();
+  }
+
+  console.log('App shutting down gracefully...');
+});
+
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
 });
 
-// ─── Client-Server Helper Functions ───
+// ── Client-Server Helper Functions ───
 
 async function forwardToCentralServer(channel, arg) {
   try {
@@ -442,12 +475,12 @@ async function getTrialStatusHelper(userId) {
   try {
     const daysRemaining = await db.getTrialDaysRemaining();
     const isExpired = await db.isTrialExpired();
-    
+
     let isActivated = false;
     let isVIP = false;
     let isBanned = false;
     let pendingKey = null;
-    
+
     if (userId) {
       const user = await db.getUserById(userId);
       if (user) {
@@ -458,7 +491,7 @@ async function getTrialStatusHelper(userId) {
             await db.deactivateLicense(userId);
           }
         }
-        
+
         const freshUser = await db.getUserById(userId);
         isActivated = !!freshUser.licenseKey || freshUser.isVIP;
         isVIP = freshUser.isVIP;
@@ -466,10 +499,10 @@ async function getTrialStatusHelper(userId) {
         pendingKey = freshUser.pendingKey || null;
       }
     }
-    
+
     const settings = await db.getSettings();
     const isMaintenance = (settings && settings.maintenanceMode && userId && !(await db.getUserById(userId))?.isAdmin);
-    
+
     return {
       success: true,
       daysRemaining,
@@ -501,6 +534,8 @@ async function handleSocialLoginHelper(provider, email, name) {
 
     let user = await db.getUserById(targetEmail);
     if (!user) {
+      // Note: bcrypt is used here but not imported at top. Assuming it's available globally or via db/utils
+      const bcrypt = require('bcryptjs');
       const hashedPassword = bcrypt.hashSync('sociallogin123', 10);
       const newUser = {
         id: targetEmail,
@@ -525,7 +560,7 @@ async function handleSocialLoginHelper(provider, email, name) {
       await db.updateUser(user.email || user.id, { name: targetName });
       user = await db.getUserById(targetEmail);
     }
-    
+
     if (user.isBanned) {
       return { success: false, error: 'Your account has been banned by the administrator.' };
     }
@@ -546,7 +581,7 @@ async function handleSocialLoginHelper(provider, email, name) {
 // ─── IPC HANDLERS (Main Process API) ───
 // ═══════════════════════════════════════════
 
-// ─── Window Controls ───
+// ─── Window Controls ──
 ipcMain.handle('window-minimize', () => {
   if (mainWindow) mainWindow.minimize();
 });
@@ -575,7 +610,7 @@ ipcMain.handle('navigate', (event, page) => {
   if (mainWindow) {
     let pageName = page;
     let query = {};
-    
+
     if (page.includes('?')) {
       const parts = page.split('?');
       pageName = parts[0];
@@ -584,7 +619,7 @@ ipcMain.handle('navigate', (event, page) => {
         query[key] = val;
       }
     }
-    
+
     const pagePath = path.join(__dirname, 'src', 'pages', `${pageName}.html`);
     mainWindow.loadFile(pagePath, { query });
   }
@@ -677,19 +712,19 @@ ipcMain.handle('get-current-user', async () => {
 
 ipcMain.handle('is-localhost', () => {
   const fs = require('fs');
-  const isDevPC = !app.isPackaged || 
-                  fs.existsSync('E:\\google meet\\main.js') || 
-                  fs.existsSync('D:\\google meet\\main.js') ||
-                  fs.existsSync('C:\\google meet\\main.js');
+  const isDevPC = !app.isPackaged ||
+    fs.existsSync('E:\\google meet\\main.js') ||
+    fs.existsSync('D:\\google meet\\main.js') ||
+    fs.existsSync('C:\\google meet\\main.js');
   return isLocalhost || isDevPC;
 });
 
 ipcMain.handle('auto-login-admin', async () => {
   const fs = require('fs');
-  const isDevPC = !app.isPackaged || 
-                  fs.existsSync('E:\\google meet\\main.js') || 
-                  fs.existsSync('D:\\google meet\\main.js') ||
-                  fs.existsSync('C:\\google meet\\main.js');
+  const isDevPC = !app.isPackaged ||
+    fs.existsSync('E:\\google meet\\main.js') ||
+    fs.existsSync('D:\\google meet\\main.js') ||
+    fs.existsSync('C:\\google meet\\main.js');
   if (db) {
     try {
       const users = await db.getAllUsers();
@@ -1023,15 +1058,15 @@ ipcMain.handle('export-license-keys', async () => {
       if (keysList.length === 0) {
         return { success: false, error: 'No unused license keys available to export.' };
       }
-      
+
       const fileContent = keysList.map(k => k.key).join('\r\n');
-      
+
       const { filePath } = await dialog.showSaveDialog(mainWindow, {
         title: 'Export Unused License Keys',
         defaultPath: path.join(app.getPath('downloads'), 'AtikMeet_Unused_Keys.txt'),
         filters: [{ name: 'Text Files', extensions: ['txt'] }]
       });
-      
+
       if (filePath) {
         fs.writeFileSync(filePath, fileContent, 'utf-8');
         return { success: true, count: keysList.length };
@@ -1159,19 +1194,19 @@ function downloadFile(fileUrl, destPath, onProgress) {
     });
 
     request.on('error', (err) => {
-      fs.unlink(destPath, () => {});
+      fs.unlink(destPath, () => { });
       reject(err);
     });
   });
 }
 
-// ─── Auto-Update Handlers ───
+// ─── Auto-Update Handlers ──
 ipcMain.handle('check-for-updates', async () => {
   try {
     const response = await fetch('https://raw.githubusercontent.com/AtikShahriar01/AtikMeetSoft/main/package.json');
     if (!response.ok) throw new Error('Could not fetch package.json from GitHub');
     const data = await response.json();
-    
+
     const semverCompare = (v1, v2) => {
       const p1 = v1.split('.').map(Number);
       const p2 = v2.split('.').map(Number);
@@ -1196,33 +1231,33 @@ ipcMain.handle('check-for-updates', async () => {
 let isUpdating = false;
 ipcMain.handle('start-update', async (event) => {
   if (isUpdating) return { success: false, error: 'Update already in progress' };
-  
+
   try {
     const checkRes = await fetch('https://raw.githubusercontent.com/AtikShahriar01/AtikMeetSoft/main/package.json');
     if (!checkRes.ok) throw new Error('Failed to retrieve update version from GitHub');
     const data = await checkRes.json();
-    
+
     if (!data || !data.version) throw new Error('Could not determine new version from GitHub package.json');
-    
+
     const downloadUrl = `https://github.com/AtikShahriar01/AtikMeetSoft/releases/download/v${data.version}/AtikMeet-${data.version}%20Setup.exe`;
-    
+
     isUpdating = true;
     const tempDir = app.getPath('temp');
     const installerPath = path.join(tempDir, 'atikmeet-setup.exe');
-    
+
     console.log(`[Update] Starting download from ${downloadUrl} to ${installerPath}`);
-    
+
     await downloadFile(downloadUrl, installerPath, (progress) => {
       if (mainWindow) {
         mainWindow.webContents.send('update-progress', progress);
       }
     });
-    
+
     console.log('[Update] Download complete. Executing installer...');
     if (mainWindow) {
       mainWindow.webContents.send('update-completed');
     }
-    
+
     // Launch installer and exit Electron
     const { exec } = require('child_process');
     exec(`"${installerPath}"`, (err) => {
@@ -1230,11 +1265,11 @@ ipcMain.handle('start-update', async (event) => {
         console.error('[Update] Installer execution failed:', err);
       }
     });
-    
+
     setTimeout(() => {
       app.quit();
     }, 1000);
-    
+
     return { success: true };
   } catch (err) {
     isUpdating = false;
@@ -1350,16 +1385,16 @@ ipcMain.handle('clear-signal-listener', async (event, roomId) => {
       signalUnsubscribeMap.delete(roomId);
       console.log(`[Signaling] Cleared listener for room: ${roomId}`);
     }
-    
+
     // Asynchronously delete signal logs from database to keep it clean
     const firestoreDb = db.firestoreDb;
     if (firestoreDb) {
       const signalsCol = collection(firestoreDb, `meetings/${roomId}/signals`);
       getDocs(signalsCol).then((snapshot) => {
         snapshot.forEach((docSnap) => {
-          deleteDoc(docSnap.ref).catch(() => {});
+          deleteDoc(docSnap.ref).catch(() => { });
         });
-      }).catch(() => {});
+      }).catch(() => { });
     }
     return { success: true };
   } catch (err) {
