@@ -80,13 +80,7 @@
 
           <div class="google-input-group">
             <input type="email" id="manual-email" required placeholder=" ">
-            <label for="manual-email">Email or phone</label>
-            <div class="input-line"></div>
-          </div>
-
-          <div class="google-input-group">
-            <input type="password" id="manual-password" required placeholder=" ">
-            <label for="manual-password">Password</label>
+            <label for="manual-email">Email Address</label>
             <div class="input-line"></div>
           </div>
 
@@ -94,7 +88,7 @@
 
           <div class="form-actions">
             <button type="button" class="btn-text" onclick="goBackToChooser()">Back</button>
-            <button type="submit" class="btn-contained">Next</button>
+            <button type="submit" class="btn-contained">Sign In & Connect</button>
           </div>
         </form>
       </div>
@@ -130,6 +124,28 @@
     let selectedName = '';
     let selectedEmail = '';
     let provider = 'google';
+
+    function getSavedAccounts() {
+      try {
+        const raw = localStorage.getItem('atikmeet_saved_social_accounts');
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveAccount(name, email, prov) {
+      try {
+        const accounts = getSavedAccounts();
+        const existingIdx = accounts.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
+        if (existingIdx >= 0) {
+          accounts[existingIdx] = { name, email, provider: prov };
+        } else {
+          accounts.unshift({ name, email, provider: prov });
+        }
+        localStorage.setItem('atikmeet_saved_social_accounts', JSON.stringify(accounts.slice(0, 6)));
+      } catch (e) {}
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
       // Parse query parameter
@@ -167,64 +183,37 @@
       }
       logoContainer.innerHTML = logoSvg;
 
-      // Update Page Chooser Accounts dynamically
+      // Update Page Chooser Accounts dynamically from localStorage
       const accountList = document.querySelector('.account-list');
+      const saved = getSavedAccounts().filter(a => a.provider === provider || !a.provider);
       let accountHtml = '';
+
+      if (saved.length > 0) {
+        saved.forEach(acc => {
+          const firstLetter = acc.name ? acc.name.charAt(0).toUpperCase() : 'U';
+          accountHtml += `
+            <div class="account-item" onclick="selectPresetAccount('${acc.name.replace(/'/g, "\\'")}', '${acc.email.replace(/'/g, "\\'")}')">
+              <div class="account-avatar font-avatar green">${firstLetter}</div>
+              <div class="account-info">
+                <span class="account-name">${acc.name}</span>
+                <span class="account-email">${acc.email}</span>
+              </div>
+              <div class="account-badge">Saved</div>
+            </div>
+          `;
+        });
+      }
+
       if (provider === 'google') {
-        accountHtml = `
-          <div class="account-item" onclick="selectPresetAccount('Atik Shahriar', 'atik.google@atikmeet.com')">
-            <div class="account-avatar font-avatar green">A</div>
-            <div class="account-info">
-              <span class="account-name">Atik Shahriar</span>
-              <span class="account-email">atik.google@atikmeet.com</span>
+        accountHtml += `
+          <div class="account-item" onclick="window.open('https://accounts.google.com/AccountChooser', '_blank')">
+            <div class="account-avatar icon-avatar" style="background: rgba(66, 133, 244, 0.15); color: #4285F4;">
+              <i class="fa-brands fa-google"></i>
             </div>
-            <div class="account-badge">Owner</div>
-          </div>
-          <div class="account-item" onclick="selectPresetAccount('Atik Meet Guest', 'atikmeet.guest@gmail.com')">
-            <div class="account-avatar font-avatar blue">G</div>
             <div class="account-info">
-              <span class="account-name">Atik Meet Guest</span>
-              <span class="account-email">atikmeet.guest@gmail.com</span>
+              <span class="account-name label-blue">Open Google Accounts Manager</span>
+              <span class="account-email" style="font-size:11px;">Pick from Chrome logged-in accounts</span>
             </div>
-            <div class="account-badge">Guest</div>
-          </div>
-        `;
-      } else if (provider === 'github') {
-        accountHtml = `
-          <div class="account-item" onclick="selectPresetAccount('Atik Shahriar', 'atik.github@github.com')">
-            <div class="account-avatar font-avatar green">A</div>
-            <div class="account-info">
-              <span class="account-name">Atik Shahriar</span>
-              <span class="account-email">atik.github@github.com</span>
-            </div>
-            <div class="account-badge">Owner</div>
-          </div>
-          <div class="account-item" onclick="selectPresetAccount('Atik Meet Guest', 'guest.github@github.com')">
-            <div class="account-avatar font-avatar blue">G</div>
-            <div class="account-info">
-              <span class="account-name">Atik Meet Guest</span>
-              <span class="account-email">guest.github@github.com</span>
-            </div>
-            <div class="account-badge">Guest</div>
-          </div>
-        `;
-      } else if (provider === 'microsoft') {
-        accountHtml = `
-          <div class="account-item" onclick="selectPresetAccount('Atik Shahriar', 'atik.microsoft@outlook.com')">
-            <div class="account-avatar font-avatar green">A</div>
-            <div class="account-info">
-              <span class="account-name">Atik Shahriar</span>
-              <span class="account-email">atik.microsoft@outlook.com</span>
-            </div>
-            <div class="account-badge">Owner</div>
-          </div>
-          <div class="account-item" onclick="selectPresetAccount('Atik Meet Guest', 'guest.ms@outlook.com')">
-            <div class="account-avatar font-avatar blue">G</div>
-            <div class="account-info">
-              <span class="account-name">Atik Meet Guest</span>
-              <span class="account-email">guest.ms@outlook.com</span>
-            </div>
-            <div class="account-badge">Guest</div>
           </div>
         `;
       }
@@ -235,7 +224,7 @@
             <i class="fa-solid fa-user-plus"></i>
           </div>
           <div class="account-info">
-            <span class="account-name label-blue">Use another account</span>
+            <span class="account-name label-blue">Sign in with email address</span>
           </div>
         </div>
       `;
@@ -259,7 +248,7 @@
       
       const manualEmailLabel = document.querySelector('label[for="manual-email"]');
       if (manualEmailLabel) {
-        manualEmailLabel.innerHTML = `${providerCapitalized} Email or phone`;
+        manualEmailLabel.innerHTML = `${providerCapitalized} Email Address`;
       }
     });
 
@@ -273,6 +262,7 @@
     function selectPresetAccount(name, email) {
       selectedName = name;
       selectedEmail = email;
+      saveAccount(name, email, provider);
       startVerification();
     }
 
@@ -290,7 +280,6 @@
       e.preventDefault();
       const name = document.getElementById('manual-name').value.trim();
       const email = document.getElementById('manual-email').value.trim();
-      const password = document.getElementById('manual-password').value;
 
       if (!name || name.length < 2) {
         showError('Enter your full name');
@@ -300,13 +289,10 @@
         showError('Enter a valid email address');
         return;
       }
-      if (!password || password.length < 6) {
-        showError('Enter your account password (at least 6 characters)');
-        return;
-      }
 
       selectedName = name;
       selectedEmail = email;
+      saveAccount(name, email, provider);
       startVerification();
     }
 

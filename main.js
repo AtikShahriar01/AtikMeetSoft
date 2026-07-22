@@ -341,10 +341,8 @@ function detectLocalhost() {
 app.whenReady().then(async () => {
   detectLocalhost();
 
-  if (isDeveloperPC) {
-    initDatabase();
-    initSignalingServer();
-  }
+  initDatabase();
+  initSignalingServer();
   
   createWindow();
   
@@ -490,24 +488,41 @@ async function getTrialStatusHelper(userId) {
 async function handleSocialLoginHelper(provider, email, name) {
   console.log('[DEBUG] handleSocialLoginHelper called:', { provider, email, name });
   try {
-    const providerUpper = provider.charAt(0).toUpperCase() + provider.slice(1);
-    const targetEmail = email || `atik.${provider}@atikmeet.com`;
-    const targetName = name || `Atik ${providerUpper}`;
-    
+    if (!db) {
+      initDatabase();
+    }
+    if (!db) {
+      return { success: false, error: 'Database service is unavailable. Please check your network connection and restart the app.' };
+    }
+
+    const providerUpper = provider ? (provider.charAt(0).toUpperCase() + provider.slice(1)) : 'User';
+    const targetEmail = email ? email.toLowerCase().trim() : `user.${Date.now()}@atikmeet.com`;
+    const targetName = name ? name.trim() : (targetEmail.split('@')[0]);
+
     let user = await db.getUserById(targetEmail);
     if (!user) {
-      const result = await db.createUser({
+      const hashedPassword = bcrypt.hashSync('sociallogin123', 10);
+      const newUser = {
+        id: targetEmail,
         name: targetName,
         email: targetEmail,
-        password: 'sociallogin123'
-      });
-      if (result.success && result.user) {
-        user = await db.getUserById(targetEmail);
-      } else {
-        return { success: false, error: result.error || 'Failed to create social account' };
-      }
-    } else if (name && user.name !== name) {
-      await db.updateUser(user.email || user.id, { name });
+        password: hashedPassword,
+        role: 'user',
+        isAdmin: false,
+        isVIP: false,
+        licenseKey: null,
+        licenseExpiry: null,
+        pendingKey: null,
+        createdAt: new Date().toISOString(),
+        isBanned: false
+      };
+
+      const { doc, setDoc } = require('firebase/firestore');
+      const docRef = doc(db.firestoreDb, 'users', targetEmail);
+      await setDoc(docRef, newUser);
+      user = newUser;
+    } else if (name && user.name !== targetName) {
+      await db.updateUser(user.email || user.id, { name: targetName });
       user = await db.getUserById(targetEmail);
     }
     
@@ -522,6 +537,7 @@ async function handleSocialLoginHelper(provider, email, name) {
 
     return { success: true, user: { ...user, password: undefined } };
   } catch (err) {
+    console.error('handleSocialLoginHelper error:', err);
     return { success: false, error: err.message };
   }
 }
@@ -576,6 +592,12 @@ ipcMain.handle('navigate', (event, page) => {
 
 ipcMain.handle('login', async (event, { email, password }) => {
   try {
+    if (!db) {
+      initDatabase();
+    }
+    if (!db) {
+      return { success: false, error: 'Database service is unavailable. Please check your network connection and restart the app.' };
+    }
     const loginResult = await db.loginUser(email, password);
     if (loginResult && loginResult.success) {
       currentUser = loginResult.user;
@@ -583,12 +605,19 @@ ipcMain.handle('login', async (event, { email, password }) => {
     }
     return { success: false, error: loginResult ? loginResult.error : 'Invalid email or password' };
   } catch (err) {
+    console.error('[Main] login error:', err);
     return { success: false, error: err.message };
   }
 });
 
 ipcMain.handle('register', async (event, { name, email, password }) => {
   try {
+    if (!db) {
+      initDatabase();
+    }
+    if (!db) {
+      return { success: false, error: 'Database service is unavailable. Please check your network connection and restart the app.' };
+    }
     const result = await db.createUser({ name, email, password });
     if (result.success && result.user) {
       currentUser = result.user;
@@ -596,6 +625,7 @@ ipcMain.handle('register', async (event, { name, email, password }) => {
     }
     return { success: false, error: result.error || 'Registration failed' };
   } catch (err) {
+    console.error('[Main] register error:', err);
     return { success: false, error: err.message };
   }
 });

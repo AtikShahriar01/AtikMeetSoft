@@ -578,8 +578,15 @@ function showError(message) {
   const messageArea = $('auth-message');
   if (!messageArea) return;
 
+  let displayMsg = message || 'Login failed. Please check your credentials and try again.';
+  if (typeof displayMsg === 'string') {
+    if (displayMsg.includes('Cannot read properties') || displayMsg.includes('null') || displayMsg.includes('undefined') || displayMsg.includes('TypeError')) {
+      displayMsg = 'Unable to connect to database. Please check your internet connection and restart the app.';
+    }
+  }
+
   messageArea.className = 'auth-message error';
-  messageArea.textContent = message;
+  messageArea.textContent = displayMsg;
   messageArea.style.display = 'block';
   messageArea.style.opacity = '0';
 
@@ -587,13 +594,13 @@ function showError(message) {
     messageArea.style.opacity = '1';
   });
 
-  // Auto-hide after 5 seconds
+  // Auto-hide after 6 seconds
   setTimeout(() => {
     messageArea.style.opacity = '0';
     setTimeout(() => {
       messageArea.style.display = 'none';
     }, 300);
-  }, 5000);
+  }, 6000);
 }
 
 /**
