@@ -363,42 +363,72 @@ function setupEventListeners() {
     }
   });
 
-  // Live Search Filter
-  $('user-search-input').addEventListener('input', (e) => {
-    const val = e.target.value.toLowerCase().trim();
-    if (!val) {
-      renderUserTable(allUsers);
-      return;
+  // Live Search Filter (Both top search and table search)
+  const setupSearch = (inputId) => {
+    const el = $(inputId);
+    if (!el) return;
+    el.addEventListener('input', (e) => {
+      const val = e.target.value.toLowerCase().trim();
+      if (!val) {
+        renderUserTable(allUsers);
+        return;
+      }
+
+      const filtered = allUsers.filter(user => {
+        return (
+          (user.name && user.name.toLowerCase().includes(val)) ||
+          (user.email && user.email.toLowerCase().includes(val)) ||
+          (user.licenseKey && user.licenseKey.toLowerCase().includes(val)) ||
+          (user.licenseActivated ? 'activated' : 'not activated').includes(val)
+        );
+      });
+
+      renderUserTable(filtered);
+    });
+  };
+
+  setupSearch('user-search-input');
+  setupSearch('admin-global-search');
+
+  // Sidebar Tab Switching
+  const switchTab = (activeTabId, showSectionClass) => {
+    document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => item.classList.remove('active'));
+    const tabEl = $(activeTabId);
+    if (tabEl) tabEl.classList.add('active');
+
+    // Show/hide sections
+    const usersSec = document.querySelector('.user-management-card');
+    const requestsSec = $('requests-section');
+    const meetingsSec = document.querySelector('.active-meetings-section');
+    const settingsSec = document.querySelector('.settings-card');
+
+    if (activeTabId === 'tab-requests') {
+      if (requestsSec) requestsSec.style.display = 'block';
+    } else {
+      if (requestsSec) requestsSec.style.display = 'none';
     }
 
-    const filtered = allUsers.filter(user => {
-      return (
-        user.name.toLowerCase().includes(val) ||
-        user.email.toLowerCase().includes(val) ||
-        (user.licenseKey && user.licenseKey.toLowerCase().includes(val)) ||
-        (user.licenseActivated ? 'activated' : 'not activated').includes(val)
-      );
-    });
+    if (showSectionClass) {
+      const targetEl = document.querySelector(showSectionClass);
+      if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
-    renderUserTable(filtered);
-  });
+  const bindTab = (id, targetClass) => {
+    const el = $(id);
+    if (el) {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchTab(id, targetClass);
+      });
+    }
+  };
 
-  // Tab switching
-  $('tab-users').addEventListener('click', (e) => {
-    e.preventDefault();
-    $('tab-users').classList.add('active');
-    $('tab-requests').classList.remove('active');
-    $('users-section').style.display = 'block';
-    $('requests-section').style.display = 'none';
-  });
-
-  $('tab-requests').addEventListener('click', (e) => {
-    e.preventDefault();
-    $('tab-requests').classList.add('active');
-    $('tab-users').classList.remove('active');
-    $('users-section').style.display = 'none';
-    $('requests-section').style.display = 'block';
-  });
+  bindTab('tab-users', '.user-management-card');
+  bindTab('tab-users-nav', '.user-management-card');
+  bindTab('tab-meetings', '.active-meetings-section');
+  bindTab('tab-requests', '#requests-section');
+  bindTab('tab-settings', '.settings-card');
 
   // Go to Client App (Home page)
   const btnDashboard = $('btn-dashboard');

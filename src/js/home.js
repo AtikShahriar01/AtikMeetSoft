@@ -184,94 +184,193 @@ async function loadRecentMeetings() {
 
 // ── Event Handlers ───────────────────────────────────────────
 function setupEventListeners() {
-  // Sidebar Nav Items
-  $('nav-home').addEventListener('click', (e) => {
-    e.preventDefault();
-  });
+  // Sidebar Nav Items Navigation
+  const navHome = $('nav-home');
+  if (navHome) {
+    navHome.addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNavItem(navHome);
+    });
+  }
 
-  $('nav-profile').addEventListener('click', (e) => {
-    e.preventDefault();
-    window.electronAPI.navigate('profile');
-  });
+  const navMeetings = $('nav-meetings');
+  if (navMeetings) {
+    navMeetings.addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNavItem(navMeetings);
+      const meetingSection = document.querySelector('.recent-history-section');
+      if (meetingSection) meetingSection.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
 
-  $('nav-license').addEventListener('click', (e) => {
-    e.preventDefault();
-    window.electronAPI.navigate('license');
-  });
+  const navCalendar = $('nav-calendar');
+  if (navCalendar) {
+    navCalendar.addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNavItem(navCalendar);
+      alert('📅 Calendar Schedule feature: No upcoming scheduled meetings for today.');
+    });
+  }
 
-  $('nav-admin').addEventListener('click', (e) => {
-    e.preventDefault();
-    window.electronAPI.navigate('admin');
-  });
+  const navContacts = $('nav-contacts');
+  if (navContacts) {
+    navContacts.addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNavItem(navContacts);
+      alert('👥 Contacts: You can share meeting links with anyone directly.');
+    });
+  }
 
-  $('banner-activate-btn').addEventListener('click', () => {
-    window.electronAPI.navigate('license');
-  });
+  const navChat = $('nav-chat');
+  if (navChat) {
+    navChat.addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNavItem(navChat);
+      alert('💬 Chat: In-meeting chat is available when you join or start a meeting.');
+    });
+  }
 
-  $('logout-btn').addEventListener('click', () => {
-    window.electronAPI.logout();
-  });
+  const navRecordings = $('nav-recordings');
+  if (navRecordings) {
+    navRecordings.addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNavItem(navRecordings);
+      alert('🔴 Recordings: Local screen recordings are saved in your Videos/AtikMeet folder.');
+    });
+  }
 
-  // Create Meeting
-  $('btn-create-meeting').addEventListener('click', async () => {
-    const result = await window.electronAPI.createMeeting();
-    if (result.success) {
-      generatedMeetingLink = result.meetingLink;
-      $('meeting-link-input').value = result.meetingLink;
-      $('meeting-link-box').style.display = 'block';
-      
-      // Update list after generating new meeting
-      await loadRecentMeetings();
-    } else {
-      alert('Error creating meeting: ' + result.error);
-    }
-  });
+  const navProfile = $('nav-profile');
+  if (navProfile) {
+    navProfile.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.electronAPI.navigate('profile');
+    });
+  }
 
-  // Copy Link
-  $('btn-copy-link').addEventListener('click', async () => {
-    const linkInput = $('meeting-link-input');
-    const linkVal = linkInput ? linkInput.value : '';
-    if (linkVal) {
-      try {
-        if (linkInput) {
-          linkInput.select();
-          linkInput.setSelectionRange(0, 99999);
-        }
-        await window.electronAPI.copyToClipboard(linkVal);
-      } catch (err) {
-        navigator.clipboard.writeText(linkVal);
+  const navLicense = $('nav-license');
+  if (navLicense) {
+    navLicense.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.electronAPI.navigate('license');
+    });
+  }
+
+  const navAdmin = $('nav-admin');
+  if (navAdmin) {
+    navAdmin.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.electronAPI.navigate('admin');
+    });
+  }
+
+  const bannerActivate = $('banner-activate-btn');
+  if (bannerActivate) {
+    bannerActivate.addEventListener('click', () => {
+      window.electronAPI.navigate('license');
+    });
+  }
+
+  const logoutBtn = $('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      window.electronAPI.logout();
+    });
+  }
+
+  // Create Meeting Card & Button
+  const btnCreateMeeting = $('btn-create-meeting');
+  if (btnCreateMeeting) {
+    btnCreateMeeting.addEventListener('click', async () => {
+      const result = await window.electronAPI.createMeeting();
+      if (result.success) {
+        generatedMeetingLink = result.meetingLink;
+        $('meeting-link-input').value = result.meetingLink;
+        $('meeting-link-box').style.display = 'block';
+        $('meeting-link-box').scrollIntoView({ behavior: 'smooth' });
+        
+        // Refresh recent meetings list
+        await loadRecentMeetings();
+      } else {
+        alert('Error creating meeting: ' + result.error);
       }
-      const copyBtn = $('btn-copy-link');
-      copyBtn.classList.add('btn-success');
-      setTimeout(() => {
-        copyBtn.classList.remove('btn-success');
-      }, 1000);
-      alert('Meeting link copied to clipboard!');
-    }
-  });
+    });
+  }
 
-  // Open in External Browser
-  $('btn-open-browser').addEventListener('click', async () => {
-    if (generatedMeetingLink) {
-      await window.electronAPI.openInBrowser(generatedMeetingLink);
-    }
-  });
+  // Copy Meeting Link Button
+  const btnCopyLink = $('btn-copy-link');
+  if (btnCopyLink) {
+    btnCopyLink.addEventListener('click', async () => {
+      const linkInput = $('meeting-link-input');
+      const linkVal = linkInput ? linkInput.value : '';
+      if (linkVal) {
+        try {
+          if (linkInput) {
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999);
+          }
+          await window.electronAPI.copyToClipboard(linkVal);
+        } catch (err) {
+          navigator.clipboard.writeText(linkVal);
+        }
+        btnCopyLink.classList.add('btn-success');
+        setTimeout(() => {
+          btnCopyLink.classList.remove('btn-success');
+        }, 1000);
+        alert('Meeting link copied to clipboard!');
+      }
+    });
+  }
 
-  // Join Native Meeting (App)
-  $('btn-join-created').addEventListener('click', () => {
-    const code = $('meeting-link-input').value.split('/').pop();
-    joinMeeting(code);
-  });
+  // Open in Browser Button
+  const btnOpenBrowser = $('btn-open-browser');
+  if (btnOpenBrowser) {
+    btnOpenBrowser.addEventListener('click', async () => {
+      const linkVal = $('meeting-link-input').value;
+      if (linkVal) {
+        await window.electronAPI.openInBrowser(linkVal);
+      }
+    });
+  }
+
+  // Join Native Meeting Button
+  const btnJoinCreated = $('btn-join-created');
+  if (btnJoinCreated) {
+    btnJoinCreated.addEventListener('click', () => {
+      const code = $('meeting-link-input').value.split('/').pop();
+      joinMeeting(code);
+    });
+  }
 
   // Join Existing Meeting via Input
-  $('btn-join-meeting').addEventListener('click', () => {
-    const codeOrLink = $('join-meeting-input').value.trim();
-    if (codeOrLink) {
-      joinMeeting(codeOrLink);
-    } else {
-      alert('Please enter a meeting link or code.');
-    }
+  const btnJoinMeeting = $('btn-join-meeting');
+  if (btnJoinMeeting) {
+    btnJoinMeeting.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const codeOrLink = $('join-meeting-input').value.trim();
+      if (codeOrLink) {
+        joinMeeting(codeOrLink);
+      } else {
+        alert('Please enter a meeting link or code.');
+      }
+    });
+  }
+
+  // Prevent input click from triggering parent card click
+  const joinInput = $('join-meeting-input');
+  if (joinInput) {
+    joinInput.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+}
+
+function setActiveNavItem(selectedItem) {
+  document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
+    item.classList.remove('active');
   });
+  if (selectedItem) {
+    selectedItem.classList.add('active');
+  }
 }
 
 function joinMeeting(meetingId) {
