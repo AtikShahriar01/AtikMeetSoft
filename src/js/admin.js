@@ -75,7 +75,7 @@ function renderUserTable(usersList) {
   tbody.innerHTML = '';
 
   if (usersList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-row">No matching users found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-row">No matching users found.</td></tr>';
     return;
   }
 
@@ -83,70 +83,57 @@ function renderUserTable(usersList) {
     const isCurrentAdmin = (user.email === 'admin@atikmeet.com');
     const row = document.createElement('tr');
     
-    // User Info formatting with Avatar bubble
-    const firstChar = user.name.charAt(0).toUpperCase();
-    const userDetailsCell = `
-      <div class="user-cell-info">
+    // Username with Avatar
+    const firstChar = user.name ? user.name.charAt(0).toUpperCase() : 'U';
+    const userCell = `
+      <div class="user-cell">
         <div class="user-avatar-circle">${firstChar}</div>
-        <div class="user-names">
-          <strong>${user.name} ${isCurrentAdmin ? '👑 (Root)' : ''}</strong>
-          <span>${user.email}</span>
-        </div>
+        <strong>${user.name || 'User'} ${isCurrentAdmin ? '👑' : ''}</strong>
       </div>
     `;
 
-    // Role cell representation
-    const roleText = user.isAdmin ? 
-      `<span style="color:var(--vip-gold); font-weight:bold;">Admin</span>` : 
-      `<span style="color:var(--text-secondary);">Member</span>`;
+    // Role pill badge
+    const rolePill = user.isAdmin ?
+      `<span class="role-pill admin">ADMIN</span>` :
+      `<span class="role-pill user">USER</span>`;
 
-    // License key status with validity details
-    let keyText = `<span style="color:var(--text-secondary); font-style:italic;">Trial Account</span>`;
-    if (user.licenseActivated && user.licenseKey) {
-      const expirationDetail = user.licenseExpiresAt ? 
-        `<br><span style="font-size:0.7rem; color:var(--text-secondary);">Expires: ${new Date(user.licenseExpiresAt).toLocaleDateString()}</span>` : 
-        `<br><span style="font-size:0.7rem; color:var(--vip-gold);">Lifetime VIP</span>`;
-      keyText = `<code style="color:var(--accent); font-weight:bold;">${user.licenseKey}</code>${expirationDetail}`;
-    }
+    // Status dot
+    const statusDot = `<span class="status-indicator"><span class="status-dot"></span> Online</span>`;
 
-    // Account state (Banned status)
-    const statusText = user.isBanned ? 
-      `<span class="badge badge-danger" style="background:rgba(255, 71, 87, 0.15); color:var(--danger);">Banned</span>` : 
-      `<span class="badge badge-success" style="background:rgba(46, 213, 115, 0.15); color:var(--success);">Active</span>`;
+    // Ban status toggle
+    const banStatus = user.isBanned ?
+      `<span class="ban-switch-label"><span class="ban-badge banned">Banned</span></span>` :
+      `<span class="ban-switch-label"><span class="ban-badge active">Active</span></span>`;
 
-    // Control buttons based on role type
+    // Registration date
+    const regDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '15/01/2026';
+
+    // Actions
     let actionsHTML = '';
     if (isCurrentAdmin) {
-      actionsHTML = `<span style="color:var(--vip-gold); font-weight:bold; font-size:0.75rem;">System Root Master</span>`;
+      actionsHTML = `<span style="color:#60a5fa; font-weight:bold; font-size:0.75rem;">Root Master</span>`;
     } else {
       const keyActionButton = user.licenseActivated ? 
         `<button class="btn btn-warning btn-sm btn-deactivate" data-id="${user.id}">Revoke VIP</button>` : 
         `<button class="btn btn-success btn-sm btn-activate" data-id="${user.id}">Grant VIP</button>`;
         
-      const banButtonText = user.isBanned ? 'Unban User' : 'Ban User';
+      const banButtonText = user.isBanned ? 'Unban' : 'Ban';
       const banButtonClass = user.isBanned ? 'btn-success' : 'btn-warning';
-      const roleToggleText = user.isAdmin ? 'Demote Member' : 'Promote Admin';
 
       actionsHTML = `
         ${keyActionButton}
-        <button class="btn btn-secondary btn-sm btn-toggle-role" data-id="${user.id}" data-admin="${user.isAdmin}">${roleToggleText}</button>
         <button class="btn ${banButtonClass} btn-sm btn-toggle-ban" data-id="${user.id}" data-banned="${user.isBanned}">${banButtonText}</button>
         <button class="btn btn-danger btn-sm btn-delete" data-id="${user.id}">Delete</button>
       `;
     }
 
     row.innerHTML = `
-      <td>${userDetailsCell}</td>
-      <td>
-        <div class="password-reveal-container">
-          <span class="password-masked" id="pass-mask-${user.id}">••••••</span>
-          <span class="password-plain" id="pass-plain-${user.id}" style="display:none; font-family:monospace;">${user.plainPasswordText || '••••••'}</span>
-          <button class="reveal-btn" data-id="${user.id}" title="Toggle Password Reveal">👁️</button>
-        </div>
-      </td>
-      <td>${roleText}</td>
-      <td>${keyText}</td>
-      <td>${statusText}</td>
+      <td>${userCell}</td>
+      <td><span style="color:#a0a0b5;">${user.email}</span></td>
+      <td>${rolePill}</td>
+      <td>${statusDot}</td>
+      <td>${banStatus}</td>
+      <td><span style="color:#64748b; font-size:0.75rem;">${regDate}</span></td>
       <td>${actionsHTML}</td>
     `;
     tbody.appendChild(row);

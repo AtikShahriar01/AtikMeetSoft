@@ -29,33 +29,56 @@
   </div>
 
   <div class="main-layout">
-    <!-- Collapsible Sidebar -->
+    <!-- Collapsible Sidebar (Screenshot 2 style) -->
     <aside class="sidebar">
-      <div class="user-profile-section">
-        <div class="avatar-container">
-          <div class="user-avatar" id="profile-avatar">A</div>
-          <img id="profile-avatar-img" src="" alt="" style="display:none; width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
-          <span class="vip-badge-icon" id="vip-badge-icon" title="Premium VIP" style="display:none;">⭐</span>
-        </div>
-        <h3 id="user-display-name">Loading...</h3>
-        <p id="user-display-role" class="role-text">User</p>
+      <div class="brand-header">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+          <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" stroke="url(#cyan-grad-home)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="cyan-grad-home" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00d4aa"/>
+              <stop offset="100%" stop-color="#3b82f6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="brand-title">AtikMeet</span>
       </div>
 
       <nav class="sidebar-nav">
         <a href="#" class="nav-item active" id="nav-home">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
           <span>Dashboard</span>
         </a>
+        <a href="#" class="nav-item" id="nav-meetings">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Meetings</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-calendar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Calendar</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-contacts">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          <span>Contacts</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-chat">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Chat</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-recordings">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M10 15l5-3-5-3v6z"/></svg>
+          <span>Recordings</span>
+        </a>
         <a href="#" class="nav-item" id="nav-profile">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span>My Profile</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Settings</span>
         </a>
         <a href="#" class="nav-item" id="nav-license">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
           <span>License Activation</span>
         </a>
         <a href="#" class="nav-item admin-only" id="nav-admin" style="display: none;">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
           <span>Admin Panel</span>
         </a>
       </nav>
@@ -70,6 +93,23 @@
 
     <!-- Main Content Panel -->
     <main class="content-panel">
+      <!-- Top Bar Header (Screenshot 2 Top Right User Card) -->
+      <header class="top-nav-bar-user">
+        <div class="top-search-icon-btn">
+          <button class="header-icon-btn" title="Notifications"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
+          <button class="header-icon-btn" title="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+        </div>
+
+        <div class="user-profile-header-card">
+          <div class="header-avatar-circle" id="profile-avatar">E</div>
+          <div class="user-header-details">
+            <span class="user-status-text"><span class="status-dot-green"></span> Online</span>
+            <span class="user-header-name" id="user-display-name">Eleanor Vance</span>
+            <span class="user-header-role" id="user-display-role">Product Manager</span>
+          </div>
+        </div>
+      </header>
+
       <!-- Trial/License Notification bar -->
       <div class="license-banner" id="license-banner">
         <div class="banner-content">
@@ -83,7 +123,7 @@
       <div class="update-banner" id="update-banner" style="display: none;">
         <div class="banner-content">
           <span class="banner-icon">🚀</span>
-          <span class="banner-text" id="update-banner-text">New update available! (v1.0.1)</span>
+          <span class="banner-text" id="update-banner-text">New update available! (v1.0.2)</span>
         </div>
         <div class="banner-actions">
           <button class="btn btn-success btn-sm" id="btn-start-update">Update & Restart</button>
@@ -91,90 +131,98 @@
         </div>
       </div>
 
-      <header class="content-header">
-        <div class="welcome-section">
-          <h1 id="welcome-text">Welcome back, Atik!</h1>
-          <p id="current-date">Monday, July 13, 2026</p>
-        </div>
-        <div class="vip-status-container" id="vip-status-container" style="display: none;">
-          <span class="vip-badge">PREMIUM VIP MEMBER ⭐</span>
-        </div>
-      </header>
+      <div class="welcome-heading-section">
+        <h1 id="welcome-text">Welcome Back, Eleanor!</h1>
+      </div>
 
-      <!-- Action Panel Grid -->
-      <div class="dashboard-grid">
-        <!-- Create Meeting Card -->
-        <div class="glass-card action-card">
-          <div class="card-icon gradient-blue">
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      <!-- Quick Action Cards Grid (Screenshot 2 Dual Cards) -->
+      <div class="quick-action-cards-grid">
+        <!-- Card 1: Start Instant Meeting -->
+        <div class="action-card-neon cyan-border" id="btn-create-meeting">
+          <div class="action-icon-circle cyan">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00d4aa" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
           </div>
-          <h3>Start New Meeting</h3>
-          <p>Get a unique meeting link to invite up to 150 people with 1080p screen sharing.</p>
-          <button class="btn btn-primary" id="btn-create-meeting">Create Meeting</button>
+          <div class="action-card-text">
+            <h3>Start Meeting Now</h3>
+            <p>Invite participants instantly</p>
+          </div>
+        </div>
 
-          <!-- Generated Link Area (Hidden initially) -->
-          <div class="meeting-link-box" id="meeting-link-box" style="display: none;">
-            <div class="link-input-wrapper">
-              <input type="text" id="meeting-link-input" readonly value="">
-              <button class="copy-btn" id="btn-copy-link" title="Copy Link">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              </button>
+        <!-- Card 2: Join Meeting with Code -->
+        <div class="action-card-neon cyan-border" id="card-join-trigger">
+          <div class="action-icon-circle cyan">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00d4aa" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          </div>
+          <div class="action-card-text" style="width: 100%;">
+            <h3>Enter Meeting Code</h3>
+            <div class="join-input-row" style="display: flex; gap: 8px; margin-top: 8px;">
+              <input type="text" id="join-meeting-input" placeholder="Join a meeting with a shared ID" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 12px; color: #fff; font-size: 0.8rem; flex-grow: 1;">
+              <button class="btn btn-primary btn-sm" id="btn-join-meeting">Join</button>
             </div>
-            <button class="btn btn-success btn-sm btn-block" id="btn-open-browser" style="margin-top: 10px;">
-              <span>Open & Join Meeting in Browser</span>
-            </button>
-            <button class="btn btn-primary btn-sm btn-block" id="btn-join-created" style="margin-top: 10px;">
-              <span>Join via Native App</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Join Meeting Card -->
-        <div class="glass-card action-card">
-          <div class="card-icon gradient-teal">
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-          </div>
-          <h3>Join an Existing Meeting</h3>
-          <p>Paste a meeting link or code here to jump right into a video conference.</p>
-          <div class="join-input-wrapper">
-            <input type="text" id="join-meeting-input" placeholder="Enter meeting code or link">
-            <button class="btn btn-primary" id="btn-join-meeting">Join</button>
           </div>
         </div>
       </div>
 
-      <!-- Recent Meetings Table -->
-      <section class="recent-meetings-section">
-        <h2>Recent Meetings</h2>
-        <div class="table-wrapper glass-card">
-          <table class="recent-meetings-table">
+      <!-- Generated Link Box (Initially Hidden) -->
+      <div class="meeting-link-box" id="meeting-link-box" style="display: none; background: #131726; border: 1px solid #00d4aa; border-radius: 12px; padding: 20px; margin-top: 20px;">
+        <h4 style="color: #00d4aa; margin-bottom: 8px;">Your Meeting Link is Ready!</h4>
+        <div class="link-input-wrapper" style="display: flex; gap: 8px;">
+          <input type="text" id="meeting-link-input" readonly value="" style="flex-grow: 1; background: #1a1f33; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 12px; color: #00d4aa; font-family: monospace;">
+          <button class="btn btn-secondary copy-btn" id="btn-copy-link" title="Copy Link">Copy</button>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 12px;">
+          <button class="btn btn-success btn-sm btn-block" id="btn-open-browser">Open in Browser</button>
+          <button class="btn btn-primary btn-sm btn-block" id="btn-join-created">Join Native App</button>
+        </div>
+      </div>
+
+      <!-- Recent Meeting History Section (Screenshot 2 Format) -->
+      <section class="recent-history-section">
+        <h2>Recent Meeting History</h2>
+        <div class="history-table-container">
+          <table class="history-table">
             <thead>
               <tr>
-                <th>Meeting ID</th>
-                <th>Host</th>
-                <th>Status</th>
-                <th>Created At</th>
+                <th>Meeting Title</th>
+                <th>Date/Time</th>
+                <th>Duration</th>
+                <th>Participants</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="meetings-table-body">
               <tr>
-                <td colspan="5" class="empty-row">No meetings found. Start a new one!</td>
+                <td>Weekly Synch - Marketing</td>
+                <td>Today 10:00 AM</td>
+                <td>45 mins</td>
+                <td>
+                  <div class="avatar-stack">
+                    <div class="stack-avatar" style="background:#3b82f6;">E</div>
+                    <div class="stack-avatar" style="background:#10b981;">A</div>
+                  </div>
+                </td>
+                <td><button class="btn-view-history">View</button></td>
+              </tr>
+              <tr>
+                <td>Product Roadmap Discussion</td>
+                <td>Yesterday 3:30 PM</td>
+                <td>1 hr 15 mins</td>
+                <td>
+                  <div class="avatar-stack">
+                    <div class="stack-avatar" style="background:#a855f7;">E</div>
+                    <div class="stack-avatar" style="background:#f59e0b;">M</div>
+                  </div>
+                </td>
+                <td><button class="btn-view-history">View</button></td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- Dashboard Footer -->
-      <footer class="dashboard-footer">
-        <div class="security-badge">
-          <span class="lock-icon">🔒</span>
-          <span>End-to-End Encrypted (AES-256-GCM)</span>
-        </div>
-        <div class="app-version-info">
-          <span>AtikMeet Client v1.0.0</span>
-        </div>
+      <!-- Footer -->
+      <footer class="dashboard-footer" style="margin-top: 40px; text-align: center; color: #64748b; font-size: 0.75rem;">
+        🔒 End-to-End Encrypted (AES-256-GCM) | AtikMeet Client v1.0.2
       </footer>
     </main>
   </div>
