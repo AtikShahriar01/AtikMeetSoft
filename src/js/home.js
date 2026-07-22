@@ -67,14 +67,17 @@ async function loadUserData() {
     $('current-date').textContent = new Date().toLocaleDateString('en-US', options);
 
     // VIP Badges
+    const vipBadgeIcon = $('vip-badge-icon');
+    const vipStatusContainer = $('vip-status-container');
     if (currentUser.isVIP) {
-      $('vip-badge-icon').style.display = 'flex';
-      $('vip-status-container').style.display = 'block';
+      if (vipBadgeIcon) vipBadgeIcon.style.display = 'flex';
+      if (vipStatusContainer) vipStatusContainer.style.display = 'block';
     }
 
     // Admin Sidebar Option
-    if (currentUser.isAdmin) {
-      $('nav-admin').style.display = 'flex';
+    const navAdmin = $('nav-admin');
+    if (currentUser.isAdmin && navAdmin) {
+      navAdmin.style.display = 'flex';
     }
   } else {
     // If not logged in, force navigation back to login

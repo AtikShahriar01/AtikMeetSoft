@@ -40,10 +40,10 @@ async function loadAdminStats() {
   const result = await window.electronAPI.getAdminStats();
   if (result.success) {
     const stats = result.stats;
-    $('stats-total-users').textContent = stats.totalUsers;
-    $('stats-active-keys').textContent = stats.activeLicenses;
-    $('stats-vip-users').textContent = stats.vipUsers;
-    $('stats-live-meetings').textContent = stats.activeMeetings;
+    if ($('stats-total-users')) $('stats-total-users').textContent = stats.totalUsers;
+    if ($('stats-active-keys')) $('stats-active-keys').textContent = stats.activeLicenses;
+    if ($('stats-vip-users')) $('stats-vip-users').textContent = stats.vipUsers;
+    if ($('stats-live-meetings')) $('stats-live-meetings').textContent = stats.activeMeetings;
   }
 }
 
@@ -51,9 +51,9 @@ async function loadAdminStats() {
 async function loadSystemSettings() {
   const result = await window.electronAPI.getSystemSettings();
   if (result.success && result.settings) {
-    $('maintenance-mode-toggle').checked = !!result.settings.maintenanceMode;
-    $('max-participants-input').value = result.settings.maxParticipants || 150;
-    $('trial-days-input').value = result.settings.trialDays || 7;
+    if ($('maintenance-mode-toggle')) $('maintenance-mode-toggle').checked = !!result.settings.maintenanceMode;
+    if ($('max-participants-input')) $('max-participants-input').value = result.settings.maxParticipants || 150;
+    if ($('trial-days-input')) $('trial-days-input').value = result.settings.trialDays || 7;
   }
 }
 
@@ -344,24 +344,27 @@ function setupEventListeners() {
   });
 
   // Save System Settings Configurations
-  $('btn-save-settings').addEventListener('click', async () => {
-    const maintenanceMode = $('maintenance-mode-toggle').checked;
-    const maxParticipants = parseInt($('max-participants-input').value, 10) || 150;
-    const trialDays = parseInt($('trial-days-input').value, 10) || 7;
-    
-    const result = await window.electronAPI.updateSystemSettings({
-      maintenanceMode,
-      maxParticipants,
-      trialDays
+  const btnSaveSettings = $('btn-save-settings');
+  if (btnSaveSettings) {
+    btnSaveSettings.addEventListener('click', async () => {
+      const maintenanceMode = $('maintenance-mode-toggle') ? $('maintenance-mode-toggle').checked : false;
+      const maxParticipants = $('max-participants-input') ? (parseInt($('max-participants-input').value, 10) || 150) : 150;
+      const trialDays = $('trial-days-input') ? (parseInt($('trial-days-input').value, 10) || 7) : 7;
+      
+      const result = await window.electronAPI.updateSystemSettings({
+        maintenanceMode,
+        maxParticipants,
+        trialDays
+      });
+      
+      if (result.success) {
+        alert('Global configurations updated successfully!');
+        await refreshDashboard();
+      } else {
+        alert('Configuration save error: ' + result.error);
+      }
     });
-    
-    if (result.success) {
-      alert('Global configurations updated successfully!');
-      await refreshDashboard();
-    } else {
-      alert('Configuration save error: ' + result.error);
-    }
-  });
+  }
 
   // Live Search Filter (Both top search and table search)
   const setupSearch = (inputId) => {
