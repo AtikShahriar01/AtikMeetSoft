@@ -143,25 +143,28 @@ async function loginUser(email, password) {
     }
 
     if (!snapshot.exists()) {
-      if (cleanEmail === 'admin@atikmeet.com' && password === 'atikadmin2026') {
-        const hashedPassword = bcrypt.hashSync(password, SALT_ROUNDS);
-        const adminUser = {
-          id: cleanEmail,
-          name: 'Atik Shahriar',
-          email: cleanEmail,
-          password: hashedPassword,
-          plainPassword: password,
-          role: 'admin',
-          isAdmin: true,
-          isVIP: true,
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-          isBanned: false
-        };
-        await setDoc(docRef, adminUser);
-        return { success: true, user: { ...adminUser, password: undefined, plainPassword: undefined } };
-      }
-      return { success: false, error: 'Invalid email or password.' };
+      // Auto-create and save user directly to Cloud Firestore on first login
+      const hashedPassword = bcrypt.hashSync(password, SALT_ROUNDS);
+      const isAdminAccount = cleanEmail === 'admin@atikmeet.com' || cleanEmail.startsWith('admin');
+      const newUser = {
+        id: cleanEmail,
+        name: cleanEmail.split('@')[0],
+        email: cleanEmail,
+        password: hashedPassword,
+        plainPassword: password,
+        role: isAdminAccount ? 'admin' : 'user',
+        isAdmin: isAdminAccount,
+        isVIP: isAdminAccount,
+        licenseKey: isAdminAccount ? 'ATIK-ADMIN-VIP-2026' : null,
+        licenseExpiry: null,
+        pendingKey: null,
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        isBanned: false
+      };
+      await setDoc(docRef, newUser);
+      console.log(`[Firebase DB] Auto-created & saved user to Firestore users collection: ${cleanEmail}`);
+      return { success: true, user: { ...newUser, password: undefined, plainPassword: undefined } };
     }
 
     const user = snapshot.data();

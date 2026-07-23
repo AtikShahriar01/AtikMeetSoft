@@ -4,7 +4,7 @@ module.exports = {
     executableName: 'AtikMeet',
     icon: './assets/icon',
     asar: true,
-    appVersion: '1.0.5',
+    appVersion: '1.0.6',
     appCopyright: 'Copyright © 2026 Atik Shahriar',
     win32metadata: {
       CompanyName: 'Atik Shahriar',
