@@ -758,34 +758,30 @@ ipcMain.handle('get-current-user', async () => {
 });
 
 ipcMain.handle('is-localhost', () => {
-  const fs = require('fs');
-  const isDevPC = !app.isPackaged ||
-    fs.existsSync('E:\\google meet\\main.js') ||
-    fs.existsSync('D:\\google meet\\main.js') ||
-    fs.existsSync('C:\\google meet\\main.js');
-  return isLocalhost || isDevPC;
+  // Packaged app binaries for clients must NEVER auto-login as admin
+  if (app.isPackaged) return false;
+  return !!process.env.ATIKMEET_DEV;
 });
 
 ipcMain.handle('auto-login-admin', async () => {
-  const fs = require('fs');
-  const isDevPC = !app.isPackaged ||
-    fs.existsSync('E:\\google meet\\main.js') ||
-    fs.existsSync('D:\\google meet\\main.js') ||
-    fs.existsSync('C:\\google meet\\main.js');
+  // Never auto-login admin in packaged installer builds for clients
+  if (app.isPackaged || !process.env.ATIKMEET_DEV) {
+    return { success: false, error: 'Auto login disabled in production build' };
+  }
+
   if (db) {
     try {
       const users = await db.getAllUsers();
       const admin = users.find(u => u.isAdmin);
       if (admin) {
         currentUser = admin;
-        console.log('[DEBUG] currentUser set from Cloud Firestore:', currentUser.email);
+        console.log('[DEBUG] Developer PC auto-logged in as admin:', currentUser.email);
         return { success: true, user: { ...admin, password: undefined } };
       }
     } catch (err) {
       console.error('[DEBUG] auto-login-admin error:', err.message);
     }
   }
-  console.log('[DEBUG] auto-login-admin failed entirely');
   return { success: false, error: 'Auto login failed' };
 });
 
