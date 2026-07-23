@@ -212,30 +212,55 @@ function initSignalingServer() {
       // URL decoding to prevent double decoding issues
       pathname = decodeURIComponent(pathname);
 
-      // Handle social login callback from external browser
-      if (pathname === '/api/social-login-complete') {
-        const provider = parsedUrl.query.provider;
+      // Handle Localhost HTTP Server Social Login Callback (Zoom / Slack / Discord Style)
+      if (pathname === '/api/social-login-complete' || pathname === '/callback') {
+        const provider = parsedUrl.query.provider || 'google';
         const email = parsedUrl.query.email;
         const name = parsedUrl.query.name;
 
-        console.log('[DEBUG] Server social-login-complete callback:', { provider, email, name });
+        console.log('[Main] Localhost HTTP OAuth Callback Received:', { provider, email, name });
 
-        const resObj = await handleSocialLoginHelper(provider, email, name);
-        if (resObj.success && resObj.user) {
-          currentUser = resObj.user;
-          if (authWindow && !authWindow.isDestroyed()) {
-            setTimeout(() => {
-              try { authWindow.close(); } catch(e) {}
-              authWindow = null;
-            }, 600);
-          }
-          if (mainWindow) {
-            mainWindow.webContents.send('social-login-success', resObj.user);
+        let resObj = { success: false, error: 'Missing email' };
+        if (email) {
+          resObj = await handleSocialLoginHelper(provider, email, name);
+          if (resObj.success && resObj.user) {
+            currentUser = resObj.user;
+            const targetPage = (resObj.user.isAdmin || resObj.user.email?.toLowerCase() === 'admin@atikmeet.com') ? 'admin' : 'home';
+            if (mainWindow) {
+              if (mainWindow.isMinimized()) mainWindow.restore();
+              mainWindow.focus();
+              mainWindow.loadFile(path.join(__dirname, 'src', 'pages', `${targetPage}.html`));
+              mainWindow.webContents.send('social-login-success', resObj.user);
+            }
           }
         }
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(resObj));
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>AtikMeet - Authentication Successful</title>
+            <style>
+              body { font-family: system-ui, -apple-system, sans-serif; background: #0f0f23; color: #ffffff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+              .card { background: rgba(255,255,255,0.05); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+              .icon { font-size: 52px; color: #00d4aa; margin-bottom: 16px; }
+              h1 { margin: 0 0 10px; font-size: 24px; color: #fff; }
+              p { color: #a0a0b0; font-size: 14px; line-height: 1.5; }
+              .badge { display: inline-block; padding: 6px 12px; background: rgba(0,212,170,0.15); color: #00d4aa; border-radius: 20px; font-weight: bold; font-size: 12px; margin-top: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div class="icon">✓</div>
+              <h1>Authentication Successful!</h1>
+              <p>Welcome back, <strong>${name || email}</strong>. You have logged in to <strong>AtikMeet</strong>.</p>
+              <div class="badge">You can close this tab and return to the AtikMeet app</div>
+            </div>
+            <script>setTimeout(() => window.close(), 3000);</script>
+          </body>
+          </html>
+        `);
         return;
       }
 
