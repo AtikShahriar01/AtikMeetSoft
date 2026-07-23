@@ -805,7 +805,12 @@ async function handleSocialLoginHelper(provider, email, name, picture) {
       };
 
       const { doc, setDoc } = require('firebase/firestore');
-      const docRef = doc(db.firestoreDb, 'users', targetEmail);
+      const firestoreInstance = db.firestoreDb;
+      if (!firestoreInstance) {
+        console.error('[AUTH] ❌ db.firestoreDb is undefined! Firebase not initialized properly.');
+        return { success: false, error: 'Firebase Firestore not initialized.' };
+      }
+      const docRef = doc(firestoreInstance, 'users', targetEmail);
       await setDoc(docRef, newUser);
       user = newUser;
       status = 'signup_success';

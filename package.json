@@ -14,8 +14,9 @@
   "author": "Atik Shahriar",
   "license": "MIT",
   "scripts": {
-    "start": "node server-standalone.js",
+    "start": "electron-forge start",
     "desktop": "electron .",
+    "package": "electron-forge package",
     "make": "electron-forge make"
   },
   "dependencies": {
