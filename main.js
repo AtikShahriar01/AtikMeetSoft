@@ -154,8 +154,8 @@ function createWindow() {
   }
   mainWindow.loadFile(path.join(__dirname, 'src', 'pages', 'splash.html'));
 
-  // Open DevTools for debugging renderer errors
-  mainWindow.webContents.openDevTools();
+  // Open DevTools if needed for debugging:
+  // mainWindow.webContents.openDevTools();
 
   mainWindow.on('closed', () => {
     mainWindow = null;
