@@ -8,51 +8,95 @@
   <link rel="stylesheet" href="../css/splash.css">
 </head>
 <body>
+  <!-- Frameless titlebar -->
+  <div class="custom-titlebar" style="-webkit-app-region: drag; height: 30px; position: absolute; top: 0; left: 0; right: 0; z-index: 9999;"></div>
+
   <div class="splash-container">
-    <div class="logo-container">
-      <!-- Colorful modern SVG Video Camera Logo -->
-      <svg class="splash-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#1a73e8" />
-            <stop offset="100%" stop-color="#00d4aa" />
-          </linearGradient>
-          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-            <shadow>0 0 15px rgba(26,115,232,0.5)</shadow>
-          </filter>
-        </defs>
-        <rect x="15" y="25" width="48" height="48" rx="12" fill="url(#logoGrad)" />
-        <polygon points="68,35 88,45 88,55 68,65" fill="url(#logoGrad)" />
-        <circle cx="39" cy="49" r="8" fill="#ffffff" opacity="0.9" />
-      </svg>
+    <div class="splash-card">
+      <div class="logo-container">
+        <div class="logo-glow"></div>
+        <svg class="splash-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logoGradSplash" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00d4aa" />
+              <stop offset="100%" stop-color="#3b82f6" />
+            </linearGradient>
+          </defs>
+          <rect x="15" y="25" width="48" height="48" rx="12" fill="url(#logoGradSplash)" />
+          <polygon points="68,35 88,45 88,55 68,65" fill="url(#logoGradSplash)" />
+          <circle cx="39" cy="49" r="8" fill="#ffffff" opacity="0.95" />
+        </svg>
+      </div>
+
+      <h1 class="splash-title">AtikMeet</h1>
+      <p class="splash-subtitle">Professional Video Conferencing</p>
+
+      <div class="feature-badge-box">
+        <span class="feature-text" id="feature-text">🔒 End-to-End Encrypted (AES-256)</span>
+      </div>
+
+      <div class="loader">
+        <div class="loader-bar"></div>
+      </div>
+
+      <p class="splash-developer">Designed & Developed by <span class="developer-name">Atik Shahriar</span></p>
     </div>
-    <h1 class="splash-title">AtikMeet</h1>
-    <p class="splash-subtitle">Premium Video Conferencing</p>
-    <div class="loader">
-      <div class="loader-bar"></div>
-    </div>
-    <p class="splash-developer">Developed by Atik Shahriar</p>
   </div>
 
   <script src="../js/browser-fallback.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
-      // Check if we are running on localhost (admin mode)
-      const isLocalhost = await window.electronAPI.isLocalhost();
+      const features = [
+        "🔒 End-to-End Encrypted (AES-256)",
+        "⚡ Ultra HD 1080p Screen Sharing",
+        "👑 VIP Member Permanent License",
+        "🚀 WebRTC Low Latency Connectivity"
+      ];
+      
+      let index = 0;
+      const featureEl = document.getElementById('feature-text');
+      
+      const tickerInterval = setInterval(() => {
+        index = (index + 1) % features.length;
+        if (featureEl) {
+          featureEl.style.opacity = '0';
+          setTimeout(() => {
+            featureEl.textContent = features[index];
+            featureEl.style.opacity = '1';
+          }, 200);
+        }
+      }, 700);
+
+      // Check if running on localhost / admin mode
+      let isLocalhost = false;
+      try {
+        isLocalhost = await window.electronAPI.isLocalhost();
+      } catch(e) {}
       
       setTimeout(async () => {
+        clearInterval(tickerInterval);
         if (isLocalhost) {
-          // Attempt auto-login as admin
-          const autoLogin = await window.electronAPI.autoLoginAdmin();
-          if (autoLogin.success) {
-            window.electronAPI.navigate('admin');
-            return;
-          }
+          try {
+            const autoLogin = await window.electronAPI.autoLoginAdmin();
+            if (autoLogin && autoLogin.success) {
+              window.electronAPI.navigate('admin');
+              return;
+            }
+          } catch(e) {}
         }
         
-        // Otherwise, go to login screen
-        window.electronAPI.navigate('login');
-      }, 3000);
+        // Otherwise, navigate to login or home
+        try {
+          const userRes = await window.electronAPI.getCurrentUser();
+          if (userRes && userRes.success) {
+            window.electronAPI.navigate('home');
+          } else {
+            window.electronAPI.navigate('login');
+          }
+        } catch(e) {
+          window.electronAPI.navigate('login');
+        }
+      }, 2800);
     });
   </script>
 </body>
