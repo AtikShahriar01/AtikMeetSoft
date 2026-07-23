@@ -28,34 +28,6 @@ function $(id) {
 // ── Initialization ───────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Auto-login if running on developer's PC / localhost
-  const isLocalHostIP = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const isDesktopApp = !!window.electronAPI;
-
-  if (isDesktopApp || isLocalHostIP) {
-    try {
-      let result;
-      if (isDesktopApp) {
-        result = await window.electronAPI.autoLoginAdmin();
-      } else {
-        const resp = await fetch('/api/auto-login-local-admin');
-        result = await resp.json();
-      }
-
-      if (result && result.success) {
-        // Bypass user panel completely for localhost developer PC
-        if (isDesktopApp) {
-          window.electronAPI.navigate('admin');
-        } else {
-          window.location.href = '/pages/admin.html';
-        }
-        return;
-      }
-    } catch (err) {
-      console.warn('Auto login admin failed:', err);
-    }
-  }
-
   initAuthListeners();
   setupExternalLinks();
   loadSavedCredentials();

@@ -67,28 +67,11 @@
         }
       }, 700);
 
-      // Check if running on localhost / admin mode
-      let isLocalhost = false;
-      try {
-        isLocalhost = await window.electronAPI.isLocalhost();
-      } catch(e) {}
-      
       setTimeout(async () => {
         clearInterval(tickerInterval);
-        if (isLocalhost) {
-          try {
-            const autoLogin = await window.electronAPI.autoLoginAdmin();
-            if (autoLogin && autoLogin.success) {
-              window.electronAPI.navigate('admin');
-              return;
-            }
-          } catch(e) {}
-        }
-        
-        // Otherwise, navigate to login or home
         try {
           const userRes = await window.electronAPI.getCurrentUser();
-          if (userRes && userRes.success) {
+          if (userRes && userRes.success && userRes.user) {
             window.electronAPI.navigate('home');
           } else {
             window.electronAPI.navigate('login');
