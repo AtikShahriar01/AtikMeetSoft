@@ -58,16 +58,96 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initAuthListeners();
   setupExternalLinks();
+  loadSavedCredentials();
   
   if (window.electronAPI && window.electronAPI.onSocialLoginSuccess) {
     window.electronAPI.onSocialLoginSuccess(() => {
       showSuccess('Account verified via web browser! Redirecting...');
       setTimeout(() => {
         window.electronAPI.navigate('home');
-      }, 800);
+      }, 600);
     });
   }
 });
+
+/**
+ * Loads saved login credentials from localStorage and displays a 1-click quick login card
+ */
+function loadSavedCredentials() {
+  try {
+    const savedRaw = localStorage.getItem('atikmeet_saved_login_credentials');
+    if (savedRaw) {
+      const saved = JSON.parse(savedRaw);
+      if (saved && saved.email) {
+        const emailInput = $('login-email');
+        const passInput = $('login-password');
+        if (emailInput && !emailInput.value) emailInput.value = saved.email;
+        if (passInput && saved.password && !passInput.value) passInput.value = saved.password;
+
+        const loginForm = $('login-form');
+        let quickCard = $('quick-login-chip-card');
+        if (loginForm && !quickCard) {
+          quickCard = document.createElement('div');
+          quickCard.id = 'quick-login-chip-card';
+          quickCard.style.cssText = `
+            background: linear-gradient(135deg, rgba(0, 212, 170, 0.15), rgba(59, 130, 246, 0.15));
+            border: 1px solid rgba(0, 212, 170, 0.35);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+          `;
+          quickCard.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 36px; height: 36px; border-radius: 50%; background: #00d4aa; color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem;">
+                ${saved.email.charAt(0).toUpperCase()}
+              </div>
+              <div style="text-align: left;">
+                <div style="color: #fff; font-weight: 600; font-size: 0.88rem;">${saved.name || saved.email.split('@')[0]}</div>
+                <div style="color: #00d4aa; font-size: 0.78rem;">${saved.email}</div>
+              </div>
+            </div>
+            <span style="background: #00d4aa; color: #0b0e19; font-size: 0.75rem; font-weight: bold; padding: 6px 12px; border-radius: 20px;">1-Click Login ➔</span>
+          `;
+          quickCard.addEventListener('click', () => {
+            if (saved.email && saved.password) {
+              handleLoginWithSaved(saved.email, saved.password);
+            }
+          });
+          loginForm.insertBefore(quickCard, loginForm.firstChild);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load saved credentials:', e);
+  }
+}
+
+async function handleLoginWithSaved(email, password) {
+  if (isSubmitting) return;
+  try {
+    isSubmitting = true;
+    showLoading('login-btn', 'Signing in...');
+    const result = await window.electronAPI.login({ email, password });
+    if (result.success) {
+      showSuccess('Saved account authenticated! Redirecting...');
+      setTimeout(() => {
+        window.electronAPI.navigate('home');
+      }, 600);
+    } else {
+      showError(result.error || 'Login failed. Please enter credentials.');
+    }
+  } catch (err) {
+    showError('Authentication error. Please try again.');
+  } finally {
+    isSubmitting = false;
+    hideLoading('login-btn', 'Sign In');
+  }
+}
 
 /**
  * Ensures external links open in standard default system browsers inside Electron
@@ -244,11 +324,18 @@ async function handleLogin(e) {
     const result = await window.electronAPI.login({ email, password });
 
     if (result.success) {
+      try {
+        localStorage.setItem('atikmeet_saved_login_credentials', JSON.stringify({
+          email,
+          password,
+          name: result.user ? result.user.name : email.split('@')[0]
+        }));
+      } catch (e) {}
+
       showSuccess('Login successful! Redirecting...');
-      // Small delay for UX before navigating
       setTimeout(() => {
         window.electronAPI.navigate('home');
-      }, 800);
+      }, 600);
     } else {
       showError(result.error || 'Login failed. Please try again.');
       shakeElement($('login-form'));
@@ -300,8 +387,24 @@ async function handleModalSignup(e) {
     const result = await window.electronAPI.register({ name: fullName, email, password });
 
     if (result.success) {
+      try {
+        localStorage.setItem('atikmeet_saved_login_credentials', JSON.stringify({
+          email,
+          password,
+          name: fullName
+        }));
+      } catch (e) {}
+
       $('modal-signup-form').style.display = 'none';
       $('modal-signup-success').style.display = 'block';
+
+      // Auto login to dashboard after 1.2 seconds
+      setTimeout(async () => {
+        const loginRes = await window.electronAPI.login({ email, password });
+        if (loginRes.success) {
+          window.electronAPI.navigate('home');
+        }
+      }, 1200);
     } else {
       alert(result.error || 'Registration failed. Please try again.');
       generateCaptcha();
