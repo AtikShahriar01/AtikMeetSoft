@@ -105,10 +105,11 @@ async function handleLoginWithSaved(email, password) {
     isSubmitting = true;
     showLoading('login-btn', 'Signing in...');
     const result = await window.electronAPI.login({ email, password });
-    if (result.success) {
-      showSuccess('Saved account authenticated! Redirecting...');
+    if (result.success && result.user) {
+      const targetPage = (result.user.isAdmin || email.toLowerCase() === 'admin@atikmeet.com') ? 'admin' : 'home';
+      showSuccess(`Welcome ${result.user.name || 'Back'}! Redirecting...`);
       setTimeout(() => {
-        window.electronAPI.navigate('home');
+        window.electronAPI.navigate(targetPage);
       }, 600);
     } else {
       showError(result.error || 'Login failed. Please enter credentials.');
@@ -295,18 +296,20 @@ async function handleLogin(e) {
 
     const result = await window.electronAPI.login({ email, password });
 
-    if (result.success) {
+    if (result.success && result.user) {
       try {
         localStorage.setItem('atikmeet_saved_login_credentials', JSON.stringify({
           email,
           password,
-          name: result.user ? result.user.name : email.split('@')[0]
+          name: result.user.name || email.split('@')[0],
+          isAdmin: result.user.isAdmin
         }));
       } catch (e) {}
 
-      showSuccess('Login successful! Redirecting...');
+      const targetPage = (result.user.isAdmin || email.toLowerCase() === 'admin@atikmeet.com') ? 'admin' : 'home';
+      showSuccess(`Welcome ${result.user.name || 'Back'}! Redirecting...`);
       setTimeout(() => {
-        window.electronAPI.navigate('home');
+        window.electronAPI.navigate(targetPage);
       }, 600);
     } else {
       showError(result.error || 'Login failed. Please try again.');
