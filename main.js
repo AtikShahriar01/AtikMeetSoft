@@ -171,8 +171,14 @@ function initSignalingServer() {
         const resObj = await handleSocialLoginHelper(provider, email, name);
         if (resObj.success && resObj.user) {
           currentUser = resObj.user;
+          if (authWindow && !authWindow.isDestroyed()) {
+            setTimeout(() => {
+              try { authWindow.close(); } catch(e) {}
+              authWindow = null;
+            }, 600);
+          }
           if (mainWindow) {
-            mainWindow.webContents.send('social-login-success');
+            mainWindow.webContents.send('social-login-success', resObj.user);
           }
         }
 
@@ -712,8 +718,7 @@ ipcMain.handle('register', async (event, { name, email, password }) => {
   }
 });
 
-let googleWin = null;
-let googleAuthResolve = null;
+let authWindow = null;
 
 ipcMain.handle('google-login-complete', async (event, data) => {
   console.log('[DEBUG] google-login-complete received in main:', data);
@@ -721,17 +726,77 @@ ipcMain.handle('google-login-complete', async (event, data) => {
     googleAuthResolve(data);
     googleAuthResolve = null;
   }
-  if (googleWin) {
-    googleWin.close();
+  if (authWindow && !authWindow.isDestroyed()) {
+    authWindow.close();
+    authWindow = null;
   }
   return { success: true };
 });
 
 ipcMain.handle('social-login', async (event, provider) => {
-  console.log('[DEBUG] social-login handler called for provider:', provider);
-  const targetUrl = `http://localhost:${SIGNALING_PORT}/pages/google-login.html?provider=${provider}`;
-  shell.openExternal(targetUrl);
-  return { success: true };
+  console.log('[Main] Opening OAuth Popup BrowserWindow for provider:', provider);
+
+  return new Promise((resolve) => {
+    if (authWindow && !authWindow.isDestroyed()) {
+      authWindow.focus();
+      return;
+    }
+
+    authWindow = new BrowserWindow({
+      width: 520,
+      height: 680,
+      title: `Sign in with ${provider ? (provider.charAt(0).toUpperCase() + provider.slice(1)) : 'OAuth'} - AtikMeet`,
+      parent: mainWindow,
+      modal: true,
+      show: false,
+      autoHideMenuBar: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        webSecurity: false
+      }
+    });
+
+    const targetUrl = `http://localhost:${SIGNALING_PORT}/pages/google-login.html?provider=${provider}`;
+    authWindow.loadURL(targetUrl);
+
+    authWindow.once('ready-to-show', () => {
+      authWindow.show();
+    });
+
+    const handleNavigation = async (url) => {
+      if (url.includes('/api/social-login-complete') || url.includes('provider=')) {
+        try {
+          const parsed = new URL(url);
+          const email = parsed.searchParams.get('email');
+          const name = parsed.searchParams.get('name');
+
+          if (email) {
+            console.log('[Main] OAuth Callback Captured:', { provider, email, name });
+            const loginRes = await handleSocialLoginHelper(provider, email, name);
+            if (authWindow && !authWindow.isDestroyed()) {
+              authWindow.close();
+              authWindow = null;
+            }
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('social-login-success', loginRes.user);
+            }
+            resolve(loginRes);
+          }
+        } catch (e) {
+          console.warn('[Main] OAuth URL parse error:', e.message);
+        }
+      }
+    };
+
+    authWindow.webContents.on('will-redirect', (evt, url) => handleNavigation(url));
+    authWindow.webContents.on('did-navigate', (evt, url) => handleNavigation(url));
+
+    authWindow.on('closed', () => {
+      authWindow = null;
+      resolve({ success: false, error: 'Authentication popup closed by user.' });
+    });
+  });
 });
 
 ipcMain.handle('logout', async () => {

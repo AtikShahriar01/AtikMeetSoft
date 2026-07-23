@@ -407,12 +407,13 @@ async function handleSocialLogin(provider) {
 
     const result = await window.electronAPI.socialLogin(provider);
 
-    if (result.success) {
+    if (result && result.success) {
       showSuccess(`Signed in with ${provider}! Redirecting...`);
+      const targetPage = (result.user && (result.user.isAdmin || result.user.email?.toLowerCase() === 'admin@atikmeet.com')) ? 'admin' : 'home';
       setTimeout(() => {
-        window.electronAPI.navigate('home');
+        window.electronAPI.navigate(targetPage);
       }, 800);
-    } else {
+    } else if (result && !result.success && result.error !== 'Authentication popup closed by user.') {
       showError(result.error || `${provider} login failed. Please try again.`);
     }
   } catch (error) {
