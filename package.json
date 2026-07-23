@@ -1,7 +1,15 @@
 {
   "name": "atikmeet",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "AtikMeet - Professional Video Conferencing Desktop App by Atik Shahriar",
+  "protocols": [
+    {
+      "name": "AtikMeet Deep Link Protocol",
+      "schemes": [
+        "atikmeet"
+      ]
+    }
+  ],
   "main": "main.js",
   "author": "Atik Shahriar",
   "license": "MIT",

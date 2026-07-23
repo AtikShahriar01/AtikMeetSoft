@@ -322,6 +322,9 @@
 
       setTimeout(async () => {
         try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirectUri = urlParams.get('redirect_uri') || 'atikmeet://callback';
+
           const url = `/api/social-login-complete?provider=${provider}&email=${encodeURIComponent(selectedEmail)}&name=${encodeURIComponent(selectedName)}`;
           const response = await fetch(url);
           const data = await response.json();
@@ -330,7 +333,11 @@
           if (data.success) {
             tickEl.style.display = 'block';
             titleEl.textContent = 'Account Verified!';
-            subtitleEl.innerHTML = `<span style="color:#00d4aa; font-weight:bold;">Successfully logged in as: ${selectedName}</span><br>Please return to the AtikMeet application window. You can close this browser tab.`;
+            subtitleEl.innerHTML = `<span style="color:#00d4aa; font-weight:bold;">Successfully logged in as: ${selectedName}</span><br>Redirecting back to AtikMeet application...`;
+            
+            // Deep Link redirect to bring AtikMeet desktop app to focus!
+            const deepLink = `${redirectUri}?provider=${encodeURIComponent(provider)}&email=${encodeURIComponent(selectedEmail)}&name=${encodeURIComponent(selectedName)}`;
+            window.location.href = deepLink;
           } else {
             titleEl.textContent = 'Login Failed';
             subtitleEl.textContent = data.error || 'Authentication rejected.';
@@ -340,7 +347,7 @@
           titleEl.textContent = 'Connection Error';
           subtitleEl.textContent = 'Could not establish connection with AtikMeet desktop application.';
         }
-      }, 1500);
+      }, 1200);
     }
   </script>
 </body>

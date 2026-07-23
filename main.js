@@ -73,18 +73,70 @@ const CENTRAL_SERVER_URL = 'https://atikmeetsoft.onrender.com';
 // Detects if the current running PC is the central server host
 let isDeveloperPC = false;
 
-// ─── Single Instance Lock ───
+const PROTOCOL = 'atikmeet';
+
+// Register atikmeet:// protocol scheme in OS registry
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient(PROTOCOL);
+}
+
+// Deep link URL handler
+async function handleDeepLinkUrl(urlStr) {
+  if (!urlStr || !urlStr.startsWith(`${PROTOCOL}://`)) return;
+  console.log('[Main] Processing Deep Link URL:', urlStr);
+  try {
+    const parsedUrl = new URL(urlStr);
+    const params = parsedUrl.searchParams;
+    const provider = params.get('provider') || 'google';
+    const email = params.get('email');
+    const name = params.get('name');
+
+    if (email) {
+      console.log('[Main] Deep link OAuth success:', { provider, email, name });
+      const resObj = await handleSocialLoginHelper(provider, email, name);
+      if (resObj.success && resObj.user) {
+        currentUser = resObj.user;
+        const targetPage = (resObj.user.isAdmin || resObj.user.email?.toLowerCase() === 'admin@atikmeet.com') ? 'admin' : 'home';
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.focus();
+          mainWindow.loadFile(path.join(__dirname, 'src', 'pages', `${targetPage}.html`));
+          mainWindow.webContents.send('social-login-success', resObj.user);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Main] Deep link parse error:', err.message);
+  }
+}
+
+// ─── Single Instance Lock & Windows Deep Linking ───
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (event, commandLine) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
+    // On Windows, deep link URL is passed as commandline argument
+    const deepLinkUrl = commandLine.find(arg => arg.startsWith(`${PROTOCOL}://`));
+    if (deepLinkUrl) {
+      handleDeepLinkUrl(deepLinkUrl);
+    }
   });
 }
+
+// macOS open-url handler
+app.on('open-url', (event, urlStr) => {
+  event.preventDefault();
+  handleDeepLinkUrl(urlStr);
+});
 
 // ─── Create Main Window ──
 function createWindow() {
@@ -734,69 +786,10 @@ ipcMain.handle('google-login-complete', async (event, data) => {
 });
 
 ipcMain.handle('social-login', async (event, provider) => {
-  console.log('[Main] Opening OAuth Popup BrowserWindow for provider:', provider);
-
-  return new Promise((resolve) => {
-    if (authWindow && !authWindow.isDestroyed()) {
-      authWindow.focus();
-      return;
-    }
-
-    authWindow = new BrowserWindow({
-      width: 520,
-      height: 680,
-      title: `Sign in with ${provider ? (provider.charAt(0).toUpperCase() + provider.slice(1)) : 'OAuth'} - AtikMeet`,
-      parent: mainWindow,
-      modal: true,
-      show: false,
-      autoHideMenuBar: true,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        webSecurity: false
-      }
-    });
-
-    const targetUrl = `http://localhost:${SIGNALING_PORT}/pages/google-login.html?provider=${provider}`;
-    authWindow.loadURL(targetUrl);
-
-    authWindow.once('ready-to-show', () => {
-      authWindow.show();
-    });
-
-    const handleNavigation = async (url) => {
-      if (url.includes('/api/social-login-complete') || url.includes('provider=')) {
-        try {
-          const parsed = new URL(url);
-          const email = parsed.searchParams.get('email');
-          const name = parsed.searchParams.get('name');
-
-          if (email) {
-            console.log('[Main] OAuth Callback Captured:', { provider, email, name });
-            const loginRes = await handleSocialLoginHelper(provider, email, name);
-            if (authWindow && !authWindow.isDestroyed()) {
-              authWindow.close();
-              authWindow = null;
-            }
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('social-login-success', loginRes.user);
-            }
-            resolve(loginRes);
-          }
-        } catch (e) {
-          console.warn('[Main] OAuth URL parse error:', e.message);
-        }
-      }
-    };
-
-    authWindow.webContents.on('will-redirect', (evt, url) => handleNavigation(url));
-    authWindow.webContents.on('did-navigate', (evt, url) => handleNavigation(url));
-
-    authWindow.on('closed', () => {
-      authWindow = null;
-      resolve({ success: false, error: 'Authentication popup closed by user.' });
-    });
-  });
+  console.log('[Main] Opening System Default Browser for OAuth provider:', provider);
+  const targetUrl = `http://localhost:${SIGNALING_PORT}/pages/google-login.html?provider=${provider}&redirect_uri=${PROTOCOL}://callback`;
+  shell.openExternal(targetUrl);
+  return { success: true };
 });
 
 ipcMain.handle('logout', async () => {

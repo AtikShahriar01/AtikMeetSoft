@@ -4,7 +4,13 @@ module.exports = {
     executableName: 'AtikMeet',
     icon: './assets/icon',
     asar: true,
-    appVersion: '1.0.7',
+    appVersion: '1.0.8',
+    protocols: [
+      {
+        name: 'AtikMeet Deep Link Protocol',
+        schemes: ['atikmeet']
+      }
+    ],
     appCopyright: 'Copyright © 2026 Atik Shahriar',
     win32metadata: {
       CompanyName: 'Atik Shahriar',
