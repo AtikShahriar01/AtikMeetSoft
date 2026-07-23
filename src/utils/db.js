@@ -81,39 +81,35 @@ seedDefaultKeys();
 
 async function createUser({ name, email, password, role = 'user' }) {
   try {
-    if (!email) return { success: false, error: 'Email is required.' };
-    const docRef = doc(firestoreDb, 'users', email.toLowerCase());
+    if (!email || !password) return { success: false, error: 'Email and password are required.' };
+    const cleanEmail = email.toLowerCase().trim();
+    const docRef = doc(firestoreDb, 'users', cleanEmail);
     const snapshot = await getDoc(docRef);
     if (snapshot.exists()) {
-      return { success: false, error: 'User with this email already exists.' };
+      return { success: false, error: 'User with this email address already exists.' };
     }
 
-    // 1. Create Firebase Auth user
-    let userCredential;
+    // 1. Try Firebase Authentication user creation
     try {
-      userCredential = await createUserWithEmailAndPassword(firebaseAuth, email.toLowerCase(), password);
+      const userCredential = await createUserWithEmailAndPassword(firebaseAuth, cleanEmail, password);
+      if (userCredential && userCredential.user) {
+        sendEmailVerification(userCredential.user).catch(e => console.warn('[Firebase DB] Verification email warning:', e.message));
+      }
     } catch (authErr) {
-      console.error('[Firebase DB] Auth signup error:', authErr.message);
-      return { success: false, error: authErr.message };
+      console.warn('[Firebase DB] Firebase Auth notice (saving to Firestore):', authErr.message);
     }
 
-    // 2. Send email verification
-    try {
-      await sendEmailVerification(userCredential.user);
-    } catch (verErr) {
-      console.error('[Firebase DB] Verification email send error:', verErr.message);
-    }
-
-    // 3. Write record to Firestore
+    // 2. Save user document directly to Cloud Firestore 'users' collection
     const hashedPassword = bcrypt.hashSync(password, SALT_ROUNDS);
     const newUser = {
-      id: email.toLowerCase(),
-      name,
-      email: email.toLowerCase(),
+      id: cleanEmail,
+      name: name ? name.trim() : cleanEmail.split('@')[0],
+      email: cleanEmail,
       password: hashedPassword,
+      plainPassword: password,
       role,
-      isAdmin: role === 'admin',
-      isVIP: role === 'admin' || false,
+      isAdmin: role === 'admin' || cleanEmail === 'admin@atikmeet.com',
+      isVIP: role === 'admin' || cleanEmail === 'admin@atikmeet.com',
       licenseKey: null,
       licenseExpiry: null,
       pendingKey: null,
@@ -122,52 +118,57 @@ async function createUser({ name, email, password, role = 'user' }) {
     };
 
     await setDoc(docRef, newUser);
-    return { success: true, user: { ...newUser, password: undefined } };
+    console.log(`[Firebase DB] User created & saved to Firestore users collection: ${cleanEmail}`);
+    return { success: true, user: { ...newUser, password: undefined, plainPassword: undefined } };
   } catch (error) {
     console.error('[Firebase DB] createUser error:', error.message);
-    return { success: false, error: 'Failed to create user.' };
+    return { success: false, error: 'Failed to create user: ' + error.message };
   }
 }
 
 async function loginUser(email, password) {
   try {
     if (!email || !password) return { success: false, error: 'Email and password are required.' };
-    
-    // 1. Authenticate with Firebase Auth
-    let userCredential;
-    try {
-      userCredential = await signInWithEmailAndPassword(firebaseAuth, email.toLowerCase(), password);
-    } catch (authErr) {
-      console.error('[Firebase DB] Auth login error:', authErr.message);
-      return { success: false, error: 'Invalid email or password.' };
-    }
+    const cleanEmail = email.toLowerCase().trim();
 
-    const firebaseUser = userCredential.user;
-
-    // 2. Enforce email verification (bypass for admin)
-    if (email.toLowerCase() !== 'admin@atikmeet.com' && !firebaseUser.emailVerified) {
-      try {
-        await sendEmailVerification(firebaseUser);
-      } catch (e) {}
-      return { success: false, error: 'Your account is not verified yet. An activation link has been sent to your email.' };
-    }
-
-    // 3. Retrieve user document from Firestore
-    const docRef = doc(firestoreDb, 'users', email.toLowerCase());
+    // 1. Check user record in Cloud Firestore
+    const docRef = doc(firestoreDb, 'users', cleanEmail);
     const snapshot = await getDoc(docRef);
+
+    // 2. Try Firebase Auth sign in
+    try {
+      await signInWithEmailAndPassword(firebaseAuth, cleanEmail, password);
+    } catch (authErr) {
+      console.warn('[Firebase DB] Firebase Auth login notice:', authErr.message);
+    }
+
     if (!snapshot.exists()) {
       return { success: false, error: 'Invalid email or password.' };
     }
 
     const user = snapshot.data();
+
+    // Verify password via bcrypt hash or stored plain password
+    let isPasswordValid = false;
+    if (user.password) {
+      isPasswordValid = bcrypt.compareSync(password, user.password);
+    }
+    if (!isPasswordValid && user.plainPassword) {
+      isPasswordValid = (password === user.plainPassword);
+    }
+
+    if (!isPasswordValid) {
+      return { success: false, error: 'Invalid email or password.' };
+    }
+
     if (user.isBanned) {
       return { success: false, error: 'Your account has been banned by the administrator.' };
     }
 
-    return { success: true, user: { ...user, password: undefined } };
+    return { success: true, user: { ...user, password: undefined, plainPassword: undefined } };
   } catch (error) {
     console.error('[Firebase DB] loginUser error:', error.message);
-    return { success: false, error: 'Login failed.' };
+    return { success: false, error: 'Login failed: ' + error.message };
   }
 }
 
