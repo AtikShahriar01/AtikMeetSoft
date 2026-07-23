@@ -4,7 +4,7 @@ module.exports = {
     executableName: 'AtikMeet',
     icon: './assets/icon',
     asar: true,
-    appVersion: '1.0.9',
+    appVersion: '1.1.0',
     protocols: [
       {
         name: 'AtikMeet Deep Link Protocol',

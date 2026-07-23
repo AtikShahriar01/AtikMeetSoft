@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { app, BrowserWindow, ipcMain, dialog, clipboard, shell, nativeImage } = require('electron');
 const path = require('path');
 const http = require('http');
@@ -212,11 +213,80 @@ function initSignalingServer() {
       // URL decoding to prevent double decoding issues
       pathname = decodeURIComponent(pathname);
 
+// ─── Google OAuth 2.0 Helper Functions (Reads from .env) ───
+function getGoogleAuthUrl() {
+  const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${SIGNALING_PORT}/callback`;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+
+  if (!clientId || clientId.includes('YOUR_GOOGLE_CLIENT_ID')) {
+    return `http://localhost:${SIGNALING_PORT}/pages/google-login.html?provider=google&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  }
+
+  const options = {
+    redirect_uri: redirectUri,
+    client_id: clientId,
+    access_type: 'offline',
+    response_type: 'code',
+    prompt: 'consent',
+    scope: [
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ].join(' ')
+  };
+  return `${rootUrl}?${new URLSearchParams(options).toString()}`;
+}
+
+async function exchangeGoogleCodeForToken(code) {
+  const tokenUrl = 'https://oauth2.googleapis.com/token';
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${SIGNALING_PORT}/callback`;
+  const values = {
+    code,
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    client_secret: process.env.GOOGLE_CLIENT_SECRET,
+    redirect_uri: redirectUri,
+    grant_type: 'authorization_code'
+  };
+
+  const response = await fetch(tokenUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(values).toString()
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error_description || 'Failed to exchange Google OAuth code');
+  }
+
+  const userRes = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${data.access_token}`);
+  const profile = await userRes.json();
+  return {
+    email: profile.email,
+    name: profile.name || profile.email.split('@')[0],
+    picture: profile.picture
+  };
+}
+
       // Handle Localhost HTTP Server Social Login Callback (Zoom / Slack / Discord Style)
       if (pathname === '/api/social-login-complete' || pathname === '/callback') {
-        const provider = parsedUrl.query.provider || 'google';
-        const email = parsedUrl.query.email;
-        const name = parsedUrl.query.name;
+        let provider = parsedUrl.query.provider || 'google';
+        let email = parsedUrl.query.email;
+        let name = parsedUrl.query.name;
+        const code = parsedUrl.query.code;
+
+        // Exchange authorization code for token if returning from Google Cloud Console OAuth
+        if (code && process.env.GOOGLE_CLIENT_ID && !process.env.GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID')) {
+          try {
+            console.log('[Main] Exchanging Google OAuth Authorization Code for User Profile...');
+            const googleProfile = await exchangeGoogleCodeForToken(code);
+            email = googleProfile.email;
+            name = googleProfile.name;
+            provider = 'google';
+          } catch (err) {
+            console.error('[Main] Google Token Exchange Failed:', err.message);
+          }
+        }
 
         console.log('[Main] Localhost HTTP OAuth Callback Received:', { provider, email, name });
 
@@ -812,7 +882,12 @@ ipcMain.handle('google-login-complete', async (event, data) => {
 
 ipcMain.handle('social-login', async (event, provider) => {
   console.log('[Main] Opening System Default Browser for OAuth provider:', provider);
-  const targetUrl = `http://localhost:${SIGNALING_PORT}/pages/google-login.html?provider=${provider}&redirect_uri=${PROTOCOL}://callback`;
+  let targetUrl = '';
+  if (provider === 'google' && process.env.GOOGLE_CLIENT_ID && !process.env.GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID')) {
+    targetUrl = getGoogleAuthUrl();
+  } else {
+    targetUrl = `http://localhost:${SIGNALING_PORT}/pages/google-login.html?provider=${provider}&redirect_uri=http://localhost:${SIGNALING_PORT}/api/social-login-complete`;
+  }
   shell.openExternal(targetUrl);
   return { success: true };
 });
