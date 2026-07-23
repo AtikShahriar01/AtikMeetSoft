@@ -271,61 +271,98 @@ async function exchangeGoogleCodeForToken(code) {
       // Handle Localhost HTTP Server Social Login Callback (Zoom / Slack / Discord Style)
       if (pathname === '/api/social-login-complete' || pathname === '/callback') {
         let provider = parsedUrl.query.provider || 'google';
-        let email = parsedUrl.query.email;
-        let name = parsedUrl.query.name;
-        const code = parsedUrl.query.code;
+        let email    = parsedUrl.query.email;
+        let name     = parsedUrl.query.name;
+        let picture  = parsedUrl.query.picture || null;
+        const code   = parsedUrl.query.code;
 
-        // Exchange authorization code for token if returning from Google Cloud Console OAuth
+        console.log('\n[OAuth] ════════════ CALLBACK RECEIVED ════════════');
+        console.log('[OAuth] Step 1: Callback received from browser');
+        console.log('[OAuth] Pathname:', pathname, '| Provider:', provider);
+        console.log('[OAuth] Code present:', !!code, '| Email present:', !!email);
+
+        // ── Step 2: If Google Authorization Code → exchange for token & user profile ──
         if (code && process.env.GOOGLE_CLIENT_ID && !process.env.GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID')) {
           try {
-            console.log('[Main] Exchanging Google OAuth Authorization Code for User Profile...');
+            console.log('[OAuth] Step 2: Exchanging Google Authorization Code for Token...');
             const googleProfile = await exchangeGoogleCodeForToken(code);
-            email = googleProfile.email;
-            name = googleProfile.name;
+            email   = googleProfile.email;
+            name    = googleProfile.name;
+            picture = googleProfile.picture;
             provider = 'google';
+            console.log('[OAuth] Step 3: Token fetched ✅ | User email:', email);
           } catch (err) {
-            console.error('[Main] Google Token Exchange Failed:', err.message);
+            console.error('[OAuth] ❌ Google Token Exchange Failed:', err.message);
           }
+        } else if (email) {
+          console.log('[OAuth] Step 2: Direct email/name provided (no code exchange needed)');
+          console.log('[OAuth] Step 3: User email:', email);
         }
 
-        console.log('[Main] Localhost HTTP OAuth Callback Received:', { provider, email, name });
+        console.log('[OAuth] Step 4: Starting database lookup & upsert...');
 
         let resObj = { success: false, error: 'Missing email' };
         if (email) {
-          resObj = await handleSocialLoginHelper(provider, email, name);
+          resObj = await handleSocialLoginHelper(provider, email, name, picture);
           if (resObj.success && resObj.user) {
             currentUser = resObj.user;
+            const isNewUser = resObj.status === 'signup_success';
             const targetPage = (resObj.user.isAdmin || resObj.user.email?.toLowerCase() === 'admin@atikmeet.com') ? 'admin' : 'home';
+            console.log(`[OAuth] Step 5: ${isNewUser ? '🎉 New user created' : '🔑 Existing user logged in'} | Target: ${targetPage}.html`);
             if (mainWindow) {
               if (mainWindow.isMinimized()) mainWindow.restore();
               mainWindow.focus();
               mainWindow.loadFile(path.join(__dirname, 'src', 'pages', `${targetPage}.html`));
-              mainWindow.webContents.send('social-login-success', resObj.user);
+              // Send status (signup_success or login_success) to renderer
+              mainWindow.webContents.send('social-login-success', { ...resObj.user, status: resObj.status });
             }
+          } else {
+            console.error('[OAuth] ❌ Auth failed:', resObj.error);
           }
         }
+        console.log('[OAuth] ═══════════════════════════════════════════\n');
+
+        const isNewUser = resObj.status === 'signup_success';
+        const successTitle = isNewUser ? '🎉 Account Created Successfully!' : '✅ Login Successful!';
+        const successMsg   = isNewUser
+          ? `Welcome to AtikMeet, <strong>${name || email}</strong>! Your account has been created.`
+          : `Welcome back, <strong>${name || email}</strong>! You have been logged in.`;
 
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(`
           <!DOCTYPE html>
           <html>
           <head>
-            <title>AtikMeet - Authentication Successful</title>
+            <title>AtikMeet - ${successTitle}</title>
             <style>
-              body { font-family: system-ui, -apple-system, sans-serif; background: #0f0f23; color: #ffffff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-              .card { background: rgba(255,255,255,0.05); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-              .icon { font-size: 52px; color: #00d4aa; margin-bottom: 16px; }
-              h1 { margin: 0 0 10px; font-size: 24px; color: #fff; }
-              p { color: #a0a0b0; font-size: 14px; line-height: 1.5; }
-              .badge { display: inline-block; padding: 6px 12px; background: rgba(0,212,170,0.15); color: #00d4aa; border-radius: 20px; font-weight: bold; font-size: 12px; margin-top: 10px; }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { font-family: system-ui, -apple-system, sans-serif; background: #0f0f23; color: #fff;
+                display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; }
+              .card { background: rgba(255,255,255,0.05); padding: 44px 36px; border-radius: 20px;
+                border: 1px solid rgba(255,255,255,0.12); max-width: 420px; width: 90%;
+                box-shadow: 0 24px 48px rgba(0,0,0,0.6); animation: fadeIn .4s ease; }
+              @keyframes fadeIn { from { opacity:0; transform: translateY(16px) } to { opacity:1; transform: translateY(0) } }
+              .icon { font-size: 56px; margin-bottom: 16px; }
+              h1 { font-size: 22px; margin-bottom: 12px; color: #fff; }
+              p { color: #a0a0b8; font-size: 14px; line-height: 1.6; }
+              .badge { display: inline-block; margin-top: 18px; padding: 8px 18px;
+                background: rgba(0,212,170,0.15); color: #00d4aa;
+                border-radius: 24px; font-weight: 600; font-size: 12px;
+                border: 1px solid rgba(0,212,170,0.3); }
+              .status-tag { display: inline-block; margin-bottom: 14px; padding: 4px 12px;
+                background: ${isNewUser ? 'rgba(139,92,246,0.2)' : 'rgba(59,130,246,0.2)'};
+                color: ${isNewUser ? '#a78bfa' : '#60a5fa'};
+                border-radius: 12px; font-size: 12px; font-weight: 600;
+                border: 1px solid ${isNewUser ? 'rgba(139,92,246,0.4)' : 'rgba(59,130,246,0.4)'}; }
             </style>
           </head>
           <body>
             <div class="card">
-              <div class="icon">✓</div>
-              <h1>Authentication Successful!</h1>
-              <p>Welcome back, <strong>${name || email}</strong>. You have logged in to <strong>AtikMeet</strong>.</p>
-              <div class="badge">You can close this tab and return to the AtikMeet app</div>
+              <div class="icon">${isNewUser ? '🎉' : '✅'}</div>
+              <div class="status-tag">${isNewUser ? 'NEW ACCOUNT' : 'SIGNED IN'}</div>
+              <h1>${successTitle}</h1>
+              <p>${successMsg}</p>
+              <div class="badge">You can close this tab — AtikMeet app is ready</div>
             </div>
             <script>setTimeout(() => window.close(), 3000);</script>
           </body>
@@ -718,64 +755,95 @@ async function getTrialStatusHelper(userId) {
   }
 }
 
-async function handleSocialLoginHelper(provider, email, name) {
-  console.log('[DEBUG] handleSocialLoginHelper called:', { provider, email, name });
+async function handleSocialLoginHelper(provider, email, name, picture) {
+  console.log('\n[AUTH] ══════════════════════════════════════');
+  console.log('[AUTH] handleSocialLoginHelper called');
+  console.log('[AUTH] Provider:', provider, '| Email:', email, '| Name:', name);
+  console.log('[AUTH] ══════════════════════════════════════');
+
   try {
     if (!db) {
+      console.log('[AUTH] DB not initialized, calling initDatabase()...');
       initDatabase();
     }
     if (!db) {
+      console.error('[AUTH] ❌ Database service unavailable!');
       return { success: false, error: 'Database service is unavailable. Please check your network connection and restart the app.' };
     }
 
-    const providerUpper = provider ? (provider.charAt(0).toUpperCase() + provider.slice(1)) : 'User';
     const targetEmail = email ? email.toLowerCase().trim() : `user.${Date.now()}@atikmeet.com`;
-    const targetName = name ? name.trim() : (targetEmail.split('@')[0]);
+    const targetName  = name  ? name.trim()                : targetEmail.split('@')[0];
+    const targetPic   = picture || null;
 
+    console.log('[AUTH] Checking Firebase for existing user:', targetEmail);
+
+    // ── Check if user already exists in Firebase ──
     let user = await db.getUserById(targetEmail);
+    let status = '';
+
     if (!user) {
-      // Note: bcrypt is used here but not imported at top. Assuming it's available globally or via db/utils
+      // ── NEW USER → Sign Up ──
+      console.log('[AUTH] ✅ New user detected → Creating account (Sign Up)...');
       const bcrypt = require('bcryptjs');
       const hashedPassword = bcrypt.hashSync('sociallogin123', 10);
       const newUser = {
-        id: targetEmail,
-        name: targetName,
-        email: targetEmail,
-        password: hashedPassword,
-        role: 'user',
-        isAdmin: false,
-        isVIP: false,
-        licenseKey: null,
+        id:            targetEmail,
+        name:          targetName,
+        email:         targetEmail,
+        picture:       targetPic,
+        provider:      provider,
+        password:      hashedPassword,
+        role:          'user',
+        isAdmin:       false,
+        isVIP:         false,
+        licenseKey:    null,
         licenseExpiry: null,
-        pendingKey: null,
-        createdAt: new Date().toISOString(),
-        isBanned: false
+        pendingKey:    null,
+        createdAt:     new Date().toISOString(),
+        lastLoginAt:   new Date().toISOString(),
+        isBanned:      false
       };
 
       const { doc, setDoc } = require('firebase/firestore');
       const docRef = doc(db.firestoreDb, 'users', targetEmail);
       await setDoc(docRef, newUser);
       user = newUser;
-    } else if (name && user.name !== targetName) {
-      await db.updateUser(user.email || user.id, { name: targetName });
-      user = await db.getUserById(targetEmail);
+      status = 'signup_success';
+      console.log('[AUTH] 🎉 New user created in Firebase:', targetEmail);
+    } else {
+      // ── EXISTING USER → Sign In ──
+      console.log('[AUTH] ✅ Existing user found → Logging in (Sign In)...');
+      status = 'login_success';
+
+      // Update name/picture if changed
+      const updates = { lastLoginAt: new Date().toISOString() };
+      if (targetName && user.name !== targetName) updates.name = targetName;
+      if (targetPic  && user.picture !== targetPic) updates.picture = targetPic;
+      await db.updateUser(targetEmail, updates);
+      user = { ...user, ...updates };
+      console.log('[AUTH] 🔑 Existing user logged in:', targetEmail);
     }
 
     if (user.isBanned) {
+      console.warn('[AUTH] ⛔ User is banned:', targetEmail);
       return { success: false, error: 'Your account has been banned by the administrator.' };
     }
 
     const settings = await db.getSettings();
     if (settings && settings.maintenanceMode && !user.isAdmin) {
+      console.warn('[AUTH] 🔧 System under maintenance.');
       return { success: false, error: 'The system is currently under maintenance. Please try again later.' };
     }
 
-    return { success: true, user: { ...user, password: undefined } };
+    console.log(`[AUTH] ✔ Auth complete. Status: ${status} | User: ${targetEmail}\n`);
+    return { success: true, status, user: { ...user, password: undefined } };
+
   } catch (err) {
-    console.error('handleSocialLoginHelper error:', err);
+    console.error('[AUTH] ❌ handleSocialLoginHelper error:', err);
     return { success: false, error: err.message };
   }
 }
+
 
 // ═══════════════════════════════════════════
 // ─── IPC HANDLERS (Main Process API) ───
@@ -881,13 +949,25 @@ ipcMain.handle('google-login-complete', async (event, data) => {
 });
 
 ipcMain.handle('social-login', async (event, provider) => {
-  console.log('[Main] Opening System Default Browser for OAuth provider:', provider);
+  console.log('\n[OAuth] ══════════════════════════════════════');
+  console.log('[OAuth] social-login IPC triggered');
+  console.log('[OAuth] Step 0: Browser opened for provider:', provider);
+
   let targetUrl = '';
-  if (provider === 'google' && process.env.GOOGLE_CLIENT_ID && !process.env.GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID')) {
+  const hasGoogleCreds = provider === 'google'
+    && process.env.GOOGLE_CLIENT_ID
+    && !process.env.GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID');
+
+  if (hasGoogleCreds) {
     targetUrl = getGoogleAuthUrl();
+    console.log('[OAuth] Using Google Cloud Console OAuth URL (real credentials)');
   } else {
     targetUrl = `http://localhost:${SIGNALING_PORT}/pages/google-login.html?provider=${provider}&redirect_uri=http://localhost:${SIGNALING_PORT}/api/social-login-complete`;
+    console.log('[OAuth] Using built-in AtikMeet login page (no .env credentials set)');
   }
+
+  console.log('[OAuth] Opening browser URL:', targetUrl.substring(0, 80) + '...');
+  console.log('[OAuth] ══════════════════════════════════════\n');
   shell.openExternal(targetUrl);
   return { success: true };
 });

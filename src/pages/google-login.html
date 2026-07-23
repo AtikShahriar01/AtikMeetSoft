@@ -312,40 +312,52 @@
     async function startVerification() {
       showPage('page-verifying');
       
-      const titleEl = document.getElementById('verifying-title');
+      const titleEl    = document.getElementById('verifying-title');
       const subtitleEl = document.getElementById('verifying-subtitle');
-      const tickEl = document.getElementById('success-tick');
-      const spinnerEl = document.querySelector('.google-spinner');
+      const tickEl     = document.getElementById('success-tick');
+      const spinnerEl  = document.querySelector('.google-spinner');
 
-      titleEl.textContent = 'Verifying Account...';
+      titleEl.textContent    = 'Verifying Account...';
       subtitleEl.textContent = `Connecting securely to ${provider.toUpperCase()} Accounts`;
+
+      console.log('[Browser] Step 1: Browser opened for provider:', provider);
+      console.log('[Browser] Step 2: startVerification() called');
+      console.log('[Browser] Selected email:', selectedEmail, '| Name:', selectedName);
 
       setTimeout(async () => {
         try {
-          const urlParams = new URLSearchParams(window.location.search);
-          const redirectUri = urlParams.get('redirect_uri') || 'atikmeet://callback';
+          const urlParams   = new URLSearchParams(window.location.search);
+          const redirectUri = urlParams.get('redirect_uri') || 'http://localhost:3478/api/social-login-complete';
 
-          const url = `/api/social-login-complete?provider=${provider}&email=${encodeURIComponent(selectedEmail)}&name=${encodeURIComponent(selectedName)}`;
-          const response = await fetch(url);
-          const data = await response.json();
-          
-          spinnerEl.style.display = 'none';
-          if (data.success) {
-            tickEl.style.display = 'block';
-            titleEl.textContent = 'Account Verified!';
-            subtitleEl.innerHTML = `<span style="color:#00d4aa; font-weight:bold;">Successfully logged in as: ${selectedName}</span><br>Redirecting back to AtikMeet application...`;
-            
-            // Deep Link redirect to bring AtikMeet desktop app to focus!
-            const deepLink = `${redirectUri}?provider=${encodeURIComponent(provider)}&email=${encodeURIComponent(selectedEmail)}&name=${encodeURIComponent(selectedName)}`;
-            window.location.href = deepLink;
+          // Build the callback URL — same flow for both Sign Up and Sign In
+          const callbackUrl = `/api/social-login-complete?provider=${encodeURIComponent(provider)}&email=${encodeURIComponent(selectedEmail)}&name=${encodeURIComponent(selectedName)}`;
+
+          console.log('[Browser] Step 3: Sending callback request to Electron HTTP server...');
+          console.log('[Browser] Callback URL:', callbackUrl);
+
+          // We use fetch but expect an HTML response — just check status code
+          const response = await fetch(callbackUrl);
+
+          console.log('[Browser] Step 4: Callback response status:', response.status);
+
+          if (response.ok) {
+            // Success — Electron main.js handles DB + window redirect
+            spinnerEl.style.display = 'none';
+            tickEl.style.display    = 'block';
+            titleEl.textContent     = 'Authentication Successful!';
+            subtitleEl.innerHTML    = `<span style="color:#00d4aa; font-weight:bold;">Logged in as: ${selectedName || selectedEmail}</span><br><span style="color:#888; font-size:13px;">AtikMeet app is opening...</span>`;
+            console.log('[Browser] Step 5: ✅ Auth success — Electron will redirect the app');
+
+            // Give Electron a moment to redirect, then close this tab
+            setTimeout(() => window.close(), 2500);
           } else {
-            titleEl.textContent = 'Login Failed';
-            subtitleEl.textContent = data.error || 'Authentication rejected.';
+            throw new Error(`Server returned status ${response.status}`);
           }
         } catch (err) {
           spinnerEl.style.display = 'none';
-          titleEl.textContent = 'Connection Error';
-          subtitleEl.textContent = 'Could not establish connection with AtikMeet desktop application.';
+          titleEl.textContent     = 'Connection Error';
+          subtitleEl.textContent  = `Could not reach AtikMeet app. (${err.message})`;
+          console.error('[Browser] ❌ startVerification error:', err);
         }
       }, 1200);
     }
