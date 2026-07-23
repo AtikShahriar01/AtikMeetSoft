@@ -7,4 +7,3 @@ server.log
 .DS_Store
 Thumbs.db
 *.exe
-forge.config.js
